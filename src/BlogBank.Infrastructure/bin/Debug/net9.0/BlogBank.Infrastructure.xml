@@ -1,0 +1,361 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>BlogBank.Infrastructure</name>
+    </assembly>
+    <members>
+        <member name="T:BlogBank.Infrastructure.Common.SnowflakeIdGenerator">
+            <summary>
+            Twitter Snowflake 算法实现。
+            ID 结构（64 bit）：
+              [0]        1  bit  符号位，固定为 0
+              [1..41]   41  bit  毫秒时间戳（相对自定义 Epoch）
+              [42..51]  10  bit  机器 ID（0 ~ 1023）
+              [52..63]  12  bit  序列号（0 ~ 4095，同毫秒内自增）
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Extensions.InfrastructureServiceExtensions.AddInfrastructure(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            注册基础设施层服务。
+            通过 appsettings.json 中的 DatabaseProvider 配置选择数据库（mysql / postgresql）。
+            </summary>
+        </member>
+        <member name="T:BlogBank.Infrastructure.Migrations.InitialCreatPg">
+            <inheritdoc />
+        </member>
+        <member name="M:BlogBank.Infrastructure.Migrations.InitialCreatPg.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:BlogBank.Infrastructure.Migrations.InitialCreatPg.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:BlogBank.Infrastructure.Migrations.InitialCreatPg.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:BlogBank.Infrastructure.Repositories.ArticleRepository">
+            <summary>
+            文章仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.Article"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.ArticleRepository.#ctor(BlogBank.Infrastructure.Data.AppDbContext,BlogBank.Core.Interfaces.ISnowflakeIdGenerator)">
+            <summary>
+            文章仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.Article"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.ArticleRepository.GetAllAsync">
+            <summary>
+            获取所有文章及其标签，按发布日期倒序排列。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.ArticleRepository.GetByIdAsync(System.Int64)">
+            <summary>
+            按 ID 查询单篇文章（含标签）。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.ArticleRepository.CreateAsync(BlogBank.Core.Entities.Article)">
+            <summary>
+            新增文章，由雪花算法生成 ID，并同步设置所有标签的外键。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.ArticleRepository.UpdateAsync(System.Int64,BlogBank.Core.Entities.Article)">
+            <summary>
+            全量更新文章字段，先删除旧标签再批量插入新标签。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.ArticleRepository.DeleteAsync(System.Int64)">
+            <summary>
+            删除指定文章，级联删除由数据库约束处理。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.ArticleRepository.GetIdTitleListAsync">
+            <summary>
+            仅查询 ID 和标题，通过列级投影避免加载正文等大字段。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.ArticleRepository.CreateBatchAsync(System.Collections.Generic.IEnumerable{BlogBank.Core.Entities.Article})">
+            <summary>
+            批量新增文章，为每条记录生成雪花 ID，一次 SaveChanges 写入。
+            </summary>
+        </member>
+        <member name="T:BlogBank.Infrastructure.Repositories.AuditLogRepository">
+            <summary>
+            操作日志仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.AuditLog"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.AuditLogRepository.#ctor(BlogBank.Infrastructure.Data.AppDbContext)">
+            <summary>
+            操作日志仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.AuditLog"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.AuditLogRepository.GetPagedAsync(System.Int32,System.Int32,System.String,System.String,System.String,System.Nullable{System.DateTime},System.Nullable{System.DateTime})">
+            <summary>
+            分页查询操作日志，支持按操作人、操作类型、表名、时间范围过滤。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.AuditLogRepository.GetByIdAsync(System.Int32)">
+            <summary>
+            按 ID 查询单条操作日志。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.AuditLogRepository.CreateAsync(BlogBank.Core.Entities.AuditLog)">
+            <summary>
+            新增操作日志，操作时间由服务端自动记录。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.AuditLogRepository.DeleteAsync(System.Int32)">
+            <summary>
+            删除指定 ID 的操作日志。
+            </summary>
+        </member>
+        <member name="T:BlogBank.Infrastructure.Repositories.EssayRepository">
+            <summary>
+            随笔仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.Essay"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.EssayRepository.#ctor(BlogBank.Infrastructure.Data.AppDbContext,BlogBank.Core.Interfaces.ISnowflakeIdGenerator)">
+            <summary>
+            随笔仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.Essay"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.EssayRepository.GetAllAsync">
+            <summary>
+            获取所有随笔及其标签，按发布日期倒序排列。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.EssayRepository.GetByIdAsync(System.Int64)">
+            <summary>
+            按 ID 查询单篇随笔（含标签）。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.EssayRepository.CreateAsync(BlogBank.Core.Entities.Essay)">
+            <summary>
+            新增随笔，由雪花算法生成 ID，并同步设置所有标签的外键。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.EssayRepository.UpdateAsync(System.Int64,BlogBank.Core.Entities.Essay)">
+            <summary>
+            全量更新随笔字段，先删除旧标签再批量插入新标签。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.EssayRepository.DeleteAsync(System.Int64)">
+            <summary>
+            删除指定随笔，级联删除由数据库约束处理。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.EssayRepository.CreateBatchAsync(System.Collections.Generic.IEnumerable{BlogBank.Core.Entities.Essay})">
+            <summary>
+            批量新增随笔，为每条记录生成雪花 ID，一次 SaveChanges 写入。
+            </summary>
+        </member>
+        <member name="T:BlogBank.Infrastructure.Repositories.MenuRepository">
+            <summary>
+            菜单仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.Menu"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.MenuRepository.#ctor(BlogBank.Infrastructure.Data.AppDbContext,BlogBank.Core.Interfaces.ISnowflakeIdGenerator)">
+            <summary>
+            菜单仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.Menu"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.MenuRepository.GetAllAsync">
+            <summary>
+            获取所有菜单扁平列表，按排序号升序排列。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.MenuRepository.GetByIdAsync(System.Int64)">
+            <summary>
+            按 ID 查询单个菜单。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.MenuRepository.GetChildrenAsync(System.Int64)">
+            <summary>
+            查询指定父节点的直接子菜单，按排序号升序排列。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.MenuRepository.CreateAsync(BlogBank.Core.Entities.Menu)">
+            <summary>
+            新增菜单，由雪花算法生成 ID。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.MenuRepository.UpdateAsync(System.Int64,BlogBank.Core.Entities.Menu)">
+            <summary>
+            全量更新菜单所有可编辑字段。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.MenuRepository.DeleteAsync(System.Int64)">
+            <summary>
+            删除指定菜单；建议先检查是否有子菜单再调用此方法。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.MenuRepository.HasChildrenAsync(System.Int64)">
+            <summary>
+            检查指定菜单是否存在直接子菜单。
+            </summary>
+        </member>
+        <member name="T:BlogBank.Infrastructure.Repositories.RoleRepository">
+            <summary>
+            角色仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.Role"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.RoleRepository.#ctor(BlogBank.Infrastructure.Data.AppDbContext)">
+            <summary>
+            角色仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.Role"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.RoleRepository.GetAllAsync">
+            <summary>
+            获取所有角色，按创建时间倒序排列。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.RoleRepository.GetByIdAsync(System.Int32)">
+            <summary>
+            按 ID 查询单个角色。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.RoleRepository.CreateAsync(BlogBank.Core.Entities.Role)">
+            <summary>
+            新增角色，ID 由数据库自增生成，自动设置创建时间为当前 UTC。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.RoleRepository.UpdateAsync(System.Int32,BlogBank.Core.Entities.Role)">
+            <summary>
+            全量更新角色的编码、名称和描述字段。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.RoleRepository.DeleteAsync(System.Int32)">
+            <summary>
+            删除指定角色，用户角色关联由数据库级联约束自动清除。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.RoleRepository.CodeExistsAsync(System.String,System.Nullable{System.Int32})">
+            <summary>
+            检查角色编码是否已被其他角色占用；<paramref name="excludeId"/> 用于排除当前角色自身。
+            </summary>
+        </member>
+        <member name="T:BlogBank.Infrastructure.Repositories.UserMenuRepository">
+            <summary>
+            用户菜单关联仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.UserMenu"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserMenuRepository.#ctor(BlogBank.Infrastructure.Data.AppDbContext)">
+            <summary>
+            用户菜单关联仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.UserMenu"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserMenuRepository.GetByUserIdAsync(System.Int64)">
+            <summary>
+            查询指定用户拥有的所有菜单关联，预加载菜单详情，按排序号升序排列。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserMenuRepository.AssignAsync(System.Int64,System.Int64)">
+            <summary>
+            为用户分配菜单权限；若关联已存在则直接返回，保证幂等性。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserMenuRepository.BatchAssignAsync(System.Int64,System.Collections.Generic.IEnumerable{System.Int64})">
+            <summary>
+            批量为用户分配菜单权限，自动跳过已存在的关联，一次事务提交。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserMenuRepository.RevokeAsync(System.Int64,System.Int64)">
+            <summary>
+            撤销用户的指定菜单权限。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserMenuRepository.ResetAsync(System.Int64,System.Collections.Generic.IEnumerable{System.Int64})">
+            <summary>
+            重置用户菜单权限：删除全部旧关联后，批量写入新关联，一次事务提交。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserMenuRepository.ExistsAsync(System.Int64,System.Int64)">
+            <summary>
+            检查指定的用户菜单关联是否存在。
+            </summary>
+        </member>
+        <member name="T:BlogBank.Infrastructure.Repositories.UserRepository">
+            <summary>
+            用户仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.User"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.#ctor(BlogBank.Infrastructure.Data.AppDbContext,BlogBank.Core.Interfaces.ISnowflakeIdGenerator)">
+            <summary>
+            用户仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.User"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.GetAllAsync">
+            <summary>
+            获取所有用户（不含角色关联），按创建时间倒序排列。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.GetByIdAsync(System.Int64)">
+            <summary>
+            按 ID 查询单个用户，同时预加载用户角色及角色详情。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.CreateAsync(BlogBank.Core.Entities.User)">
+            <summary>
+            新增用户，由雪花算法生成 ID，并自动设置创建/更新时间为当前 UTC。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.UpdateAsync(System.Int64,BlogBank.Core.Entities.User)">
+            <summary>
+            全量更新用户基本信息；仅当请求中提供了非空密码时才更新密码哈希。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.DeleteAsync(System.Int64)">
+            <summary>
+            删除指定用户，用户角色关联由数据库级联约束自动清除。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.UsernameExistsAsync(System.String,System.Nullable{System.Int64})">
+            <summary>
+            检查用户名是否已被其他用户占用；<paramref name="excludeId"/> 用于排除当前用户自身。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.EmailExistsAsync(System.String,System.Nullable{System.Int64})">
+            <summary>
+            检查邮箱是否已被其他用户占用；<paramref name="excludeId"/> 用于排除当前用户自身。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRepository.GetByUsernameAsync(System.String)">
+            <summary>
+            按用户名查询用户。
+            </summary>
+        </member>
+        <member name="T:BlogBank.Infrastructure.Repositories.UserRoleRepository">
+            <summary>
+            用户角色关联仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.UserRole"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRoleRepository.#ctor(BlogBank.Infrastructure.Data.AppDbContext)">
+            <summary>
+            用户角色关联仓储实现，基于 EF Core 对 <see cref="T:BlogBank.Core.Entities.UserRole"/> 进行持久化操作。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRoleRepository.GetByUserIdAsync(System.Int64)">
+            <summary>
+            查询指定用户的所有角色关联，预加载角色详情。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRoleRepository.GetByRoleIdAsync(System.Int32)">
+            <summary>
+            查询拥有指定角色的所有用户关联，预加载用户详情。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRoleRepository.AssignAsync(System.Int64,System.Int32)">
+            <summary>
+            为用户分配角色；若关联已存在则直接返回现有记录，保证幂等性。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRoleRepository.RevokeAsync(System.Int64,System.Int32)">
+            <summary>
+            撤销用户的指定角色关联。
+            </summary>
+        </member>
+        <member name="M:BlogBank.Infrastructure.Repositories.UserRoleRepository.ExistsAsync(System.Int64,System.Int32)">
+            <summary>
+            检查指定的用户角色关联是否存在。
+            </summary>
+        </member>
+    </members>
+</doc>

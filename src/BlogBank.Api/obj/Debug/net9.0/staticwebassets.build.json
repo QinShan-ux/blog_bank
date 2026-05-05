@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "wAZ9O+/36t8FWtFZNxzMlHabylAzFIyskyOaJzYDRuw=",
+  "Source": "BlogBank.Api",
+  "BasePath": "_content/BlogBank.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
