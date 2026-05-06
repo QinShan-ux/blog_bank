@@ -1,5 +1,6 @@
 using System.Text;
 using BlogBank.Api.Filters;
+using BlogBank.Api.profile;
 using BlogBank.Api.Swagger;
 using BlogBank.Infrastructure.Data;
 using BlogBank.Infrastructure.Extensions;
@@ -68,7 +69,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew                = TimeSpan.Zero
         };
     });
-
+builder.Services.AddAutoMapper(typeof(RoleProfile).Assembly);
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>

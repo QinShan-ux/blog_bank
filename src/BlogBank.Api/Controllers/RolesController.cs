@@ -1,8 +1,10 @@
 using System.Text.Json;
+using AutoMapper;
 using BlogBank.Api.Filters;
 using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
 using BlogBank.Core.Interfaces;
+using BlogBank.Infrastructure.dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,7 +16,7 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/roles")]
-public class RolesController(IRoleRepository repo, ICacheService cache) : ControllerBase
+public class RolesController(IRoleRepository repo, ICacheService cache,IMapper mapper) : ControllerBase
 {
     /// <summary>获取所有角色列表，按创建时间倒序排列。</summary>
     // GET /api/roles
@@ -44,11 +46,12 @@ public class RolesController(IRoleRepository repo, ICacheService cache) : Contro
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
         var role = await repo.GetByIdAsync(id);
+        var res = mapper.Map<RoleDto>(role);
         if (role is null) return NotFound();
 
-        var data = ToResponse(role);
-        await cache.SetAsync($"roles:{id}", JsonSerializer.Serialize(data), "Roles");
-        return Ok(data);
+        // var data = ToResponse(role);
+        // await cache.SetAsync($"roles:{id}", JsonSerializer.Serialize(data), "Roles");
+        return Ok(res);
     }
 
     /// <summary>
