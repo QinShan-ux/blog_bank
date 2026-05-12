@@ -1,7 +1,10 @@
+using System.Reflection;
 using System.Text;
 using BlogBank.Api.Filters;
+using BlogBank.Api.Middlewares;
 using BlogBank.Api.profile;
 using BlogBank.Api.Swagger;
+using BlogBank.Api.Tool;
 using BlogBank.Infrastructure.Data;
 using BlogBank.Infrastructure.Extensions;
 using Microsoft.Extensions.Logging;
@@ -9,10 +12,24 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", 
+        optional: true, reloadOnChange: true);
 
+// 使用 ReloadOnChange 方式创建 Logger
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    configuration
+        .Destructure.With<SensitiveDestructuringPolicy>()
+        .ReadFrom.Configuration(context.Configuration)  // 自动感知配置变化、
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext();
+});
 builder.Services.AddControllers(options =>
 {
     // 注册过滤器
@@ -69,7 +86,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew                = TimeSpan.Zero
         };
     });
-builder.Services.AddAutoMapper(typeof(RoleProfile).Assembly);
+builder.Services.AddAutoMapper(Assembly.Load("BlogBank.Api"));
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -116,6 +133,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<TokenVersionMiddleware>();
 app.MapControllers();
 
 app.Run();

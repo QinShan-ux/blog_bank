@@ -6,7 +6,7 @@ namespace BlogBank.Api.profile;
 
 public class RoleProfile: Profile
 {
-    protected RoleProfile()
+    public RoleProfile()
     {
         CreateMap<Role, RoleDto>()
             .ForMember(a => a.RoleName, 

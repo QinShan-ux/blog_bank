@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BlogBank.Api.Models;
+using BlogBank.Core.Enums;
 using BlogBank.Core.Interfaces;
 using BlogBank.Core.utils;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,7 @@ namespace BlogBank.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/auth")]
-public class AuthController(IUserRepository userRepo, ITokenService tokenService) : ControllerBase
+public class AuthController(IUserRepository userRepo, ITokenService tokenService,ICacheService cache) : ControllerBase
 {
     /// <summary>用户登录，验证用户名和密码，返回双 Token。</summary>
     // POST /api/auth/login
@@ -20,17 +21,22 @@ public class AuthController(IUserRepository userRepo, ITokenService tokenService
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
     {
         var user = await userRepo.GetByUsernameAsync(req.Username);
         if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
             return Unauthorized(new { message = "用户名或密码错误。" });
 
+        var newVersion = user.TokenVersion + 1;
         if (!user.IsEnabled)
             return Unauthorized(new { message = "账号已禁用。" });
-
+        
+        
         var (accessToken, expiresAt) = tokenService.GenerateAccessToken(user);
         var refreshToken = await tokenService.GenerateRefreshTokenAsync(user.Id);
+        await cache.SetAsync($"tokenVersion:{user.Id}", newVersion + "",30,TimeEnum.Day);
+        _ = userRepo.UpdateVersion(user.Id, newVersion);
 
         return Ok(new { accessToken, refreshToken, expiresAt });
     }

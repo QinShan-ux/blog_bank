@@ -20,6 +20,9 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
         entity.Property(u => u.Nickname)
             .HasMaxLength(100).IsRequired()
             .HasComment("显示昵称");
+        entity.Property(u => u.Phone)
+            .HasMaxLength(20).IsRequired()
+            .HasComment("电话");
         entity.Property(u => u.Email)
             .HasMaxLength(200).IsRequired()
             .HasComment("邮箱地址，全局唯一");

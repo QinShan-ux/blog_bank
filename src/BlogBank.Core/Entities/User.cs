@@ -16,9 +16,16 @@ public class User: BaseEntity
     /// </summary>
     public string Nickname { get; set; } = string.Empty;
 
+    
+    /// <summary>
+    /// 电话。
+    /// </summary>
+    public string Phone { get; set; } = string.Empty;
+    
     /// <summary>
     /// 邮箱地址，全局唯一。
     /// </summary>
+    
     public string Email { get; set; } = string.Empty;
 
     /// <summary>
@@ -35,6 +42,12 @@ public class User: BaseEntity
     /// 账号是否启用。
     /// </summary>
     public bool IsEnabled { get; set; } = true;
+    
+    
+    /// <summary>
+    /// token版本号
+    /// </summary>
+    public int TokenVersion { get; set; }
     
 
     /// <summary>

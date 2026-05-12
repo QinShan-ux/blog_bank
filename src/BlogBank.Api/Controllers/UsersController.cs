@@ -1,4 +1,6 @@
 using System.Text.Json;
+using AutoMapper;
+using BlogBank.Api.Dtos;
 using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
 using BlogBank.Core.Interfaces;
@@ -13,7 +15,7 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/users")]
-public class UsersController(IUserRepository repo, ICacheService cache) : ControllerBase
+public class UsersController(IUserRepository repo, ICacheService cache,IMapper mapper,ILogger<UsersController> logger) : ControllerBase
 {
     /// <summary>获取所有用户列表，按创建时间倒序排列。</summary>
     // GET /api/users
@@ -38,16 +40,19 @@ public class UsersController(IUserRepository repo, ICacheService cache) : Contro
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(long id)
     {
-        var cached = await cache.GetAsync($"users:{id}");
-        if (cached != null)
-            return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
+        // var cached = await cache.GetAsync($"users:{id}");
+        // if (cached != null)
+        //     return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
         var user = await repo.GetByIdAsync(id);
+        var res = mapper.Map<UserTestDto>(user);
+        logger.LogInformation("用户信息 {@user}",res);
+        logger.LogInformation(res.youxiang);
         if (user is null) return NotFound();
 
-        var data = ToResponse(user);
-        await cache.SetAsync($"users:{id}", JsonSerializer.Serialize(data), "Users");
-        return Ok(data);
+        // var data = ToResponse(user);
+        await cache.SetAsync($"users:{id}", JsonSerializer.Serialize(res), "Users");
+        return Ok(res);
     }
 
     /// <summary>

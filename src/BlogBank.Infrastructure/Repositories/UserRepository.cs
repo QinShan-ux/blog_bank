@@ -1,14 +1,16 @@
+using System.Text.Json;
 using BlogBank.Core.Entities;
 using BlogBank.Core.Interfaces;
 using BlogBank.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BlogBank.Infrastructure.Repositories;
 
 /// <summary>
 /// 用户仓储实现，基于 EF Core 对 <see cref="User"/> 进行持久化操作。
 /// </summary>
-public class UserRepository(AppDbContext db, ISnowflakeIdGenerator idGen) : IUserRepository
+public class UserRepository(AppDbContext db, ISnowflakeIdGenerator idGen,ILogger<UserRepository> logger,ICacheService cacheService) : IUserRepository
 {
     /// <summary>
     /// 获取所有用户（不含角色关联），按创建时间倒序排列。
@@ -108,5 +110,25 @@ public class UserRepository(AppDbContext db, ISnowflakeIdGenerator idGen) : IUse
         return await db.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Username == username);
+    }
+
+    public async Task UpdateVersion(long userId, int version)
+    {
+        try
+        {
+            await db.Users.Where(it => it.Id == userId)
+                .ExecuteUpdateAsync(s => 
+                    s.SetProperty(u => 
+                        u.TokenVersion, u => version));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "同步 TokenVersion 失败 userId={UserId}", userId);
+            
+            //写入补偿队列，等待定时任务重试
+            await cacheService.ListRightPushAsync("compensation:tokenVersion",
+                JsonSerializer.Serialize(new { userId, version, failAt = DateTime.UtcNow }));
+        }
+        
     }
 }

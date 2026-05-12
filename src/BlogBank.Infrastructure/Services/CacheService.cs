@@ -1,3 +1,4 @@
+using BlogBank.Core.Enums;
 using BlogBank.Core.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -89,6 +90,63 @@ public class CacheService : ICacheService
 
         foreach (var key in keys)
             _memory.Remove(key);
+    }
+
+    public async Task SetAsync(string key, string value, int span, TimeEnum timeEnum)
+    {
+        if(!IsEnabled) return;
+        var expiry = timeEnum switch
+        {
+            TimeEnum.Day    => TimeSpan.FromDays(span),
+            TimeEnum.Hour   => TimeSpan.FromHours(span),
+            TimeEnum.Minute => TimeSpan.FromMinutes(span),
+            TimeEnum.Second => TimeSpan.FromSeconds(span),
+            _ => throw new ArgumentOutOfRangeException(nameof(timeEnum), $"不支持的时间单位: {timeEnum}")
+        };
+        if (UseRedis)
+        {
+            var db = _redis.GetDatabase();
+            await db.StringSetAsync(key, value, expiry);
+            return;
+        }
+        _memory.Set(key, value, expiry);
+    }
+
+    public async Task ListRightPushAsync(string key, string value)
+    {
+        if(!IsEnabled) return;
+        if (UseRedis)
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+                await db.ListRightPushAsync(key, value);
+            }
+            catch
+            {
+                // fall through to memory cache
+            }
+        }
+        _memory.Set(key, value);
+    }
+
+    public async Task<string> ListLeftPopAsync(string key)
+    {
+        if(!IsEnabled) return null;
+        if (UseRedis)
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+                await db.ListLeftPopAsync(key);
+            }
+            catch
+            {
+                // fall through to memory cache
+            }
+        }
+        var res = _memory.Get<string>(key);
+        return res;
     }
 
     private int GetExpiry(string resource)

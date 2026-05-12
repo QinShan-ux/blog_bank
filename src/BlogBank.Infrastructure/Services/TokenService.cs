@@ -26,14 +26,15 @@ public class TokenService(IConfiguration configuration, IConnectionMultiplexer? 
         var key       = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var creds     = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var expiresAt = DateTime.UtcNow.AddMinutes(expMinutes);
-
+        
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim("Nickname", user.Nickname),
             new Claim("UserId",user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim("tokenVersion",$"{user.TokenVersion + 1}".ToString())
         };
 
         var token = new JwtSecurityToken(
