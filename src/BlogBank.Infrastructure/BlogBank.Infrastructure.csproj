@@ -13,12 +13,9 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.*" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.*" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.*" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.1.0" />
     <PackageReference Include="StackExchange.Redis" Version="2.*" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.*" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Migrations\" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -28,5 +25,11 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- 确保 SQL 文件打包到发布目录 -->
+    <None Update="Data\Scripts\StoredProcedures\*.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

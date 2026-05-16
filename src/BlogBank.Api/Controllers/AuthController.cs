@@ -51,11 +51,13 @@ public class AuthController(IAuthService authService) : ControllerBase
     [HttpPost("logout")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Logout([FromBody] RefreshRequest req)
+    public async Task<IActionResult> Logout([FromBody] Tokens req)
     {
-        await authService.LogoutAsync(req.RefreshToken);
+        await authService.LogoutAsync(req.RefreshToken,req.AccessToken);
         return NoContent();
     }
 }
 
 public record RefreshRequest([Required] string RefreshToken);
+
+public record Tokens( [Required] string AccessToken, [Required] string RefreshToken);

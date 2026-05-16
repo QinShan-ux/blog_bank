@@ -37,29 +37,20 @@ public class ArticleRepositoryTest
         _dbContext = new AppDbContext(options, httpContextAccessor.Object, idGen.Object);
 
         // 5. 预置测试数据
-        _dbContext.Articles.Add(new Article 
-            { Id = 1233, Title = "Test Article",
-                Date = DateOnly.FromDateTime(DateTime.Now),
-                Category = "cs",Content = "hello world",
-                CreatedAt = DateTime.Now,Excerpt = "hello",
-                IsDeleted = false,
-                CreatedBy = "cs",
-                UpdatedBy = "",
-                UpdatedAt = DateTime.Now,
-                ReadTime = "100",
-                RowVersion = Encoding.UTF8.GetBytes("string")
-            });
-        _dbContext.SaveChanges();
-
-        _repository = new ArticleRepository(_dbContext,idGen.Object);
-    }
-
-    [Theory]
-    [InlineData(12334)]
-    public async Task GetById_ShouldReturnArticle_WhenArticleExists(long id)
-    {
-        // Arrange
-        _dbContext.Articles.Add(new Article
+        var data = new List<Article>();
+        data.Add(new Article 
+        { Id = 1233, Title = "Test Article",
+            Date = DateOnly.FromDateTime(DateTime.Now),
+            Category = "cs",Content = "hello world",
+            CreatedAt = DateTime.Now,Excerpt = "hello",
+            IsDeleted = false,
+            CreatedBy = "cs",
+            UpdatedBy = "",
+            UpdatedAt = DateTime.Now,
+            ReadTime = "100",
+            RowVersion = Encoding.UTF8.GetBytes("string")
+        });
+        data.Add(new Article
         {
             Id = 12334, Title = "Test Article",
             Date = DateOnly.FromDateTime(DateTime.Now),
@@ -72,6 +63,19 @@ public class ArticleRepositoryTest
             ReadTime = "100",
             RowVersion = Encoding.UTF8.GetBytes("string")
         });
+        _dbContext.Articles.AddRange(data);
+        _dbContext.SaveChanges();
+
+        _repository = new ArticleRepository(_dbContext,idGen.Object);
+    }
+
+    [Theory]
+    [InlineData(1233)]
+    [InlineData(12334)]
+    public async Task GetById_ShouldReturnArticle_WhenArticleExists(long id)
+    {
+        // Arrange
+        
         // Act
         var result = await _repository.GetByIdAsync(id);
 

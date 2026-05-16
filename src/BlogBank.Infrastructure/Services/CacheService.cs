@@ -92,6 +92,25 @@ public class CacheService : ICacheService
             _memory.Remove(key);
     }
 
+    public async Task RemoveAsync(string key)
+    {
+        if (!IsEnabled) return;
+
+        if (UseRedis)
+        {
+            try
+            {
+                var db = await _redis.GetDatabase().KeyDeleteAsync(key);
+                return;
+            }
+            catch
+            {
+                // fall through to memory cache
+            }
+        }
+        _memory.Remove(key);
+    }
+
     public async Task SetAsync(string key, string value, int span, TimeEnum timeEnum)
     {
         if(!IsEnabled) return;
@@ -147,6 +166,79 @@ public class CacheService : ICacheService
         }
         var res = _memory.Get<string>(key);
         return res;
+    }
+
+    public async Task<bool> IsExit(string key)
+    {
+        if(!IsEnabled) return false;
+        if (UseRedis)
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+                return await db.KeyExistsAsync(key);
+            }
+            catch
+            {
+                // fall through to memory cache
+            }
+        }
+        var res = _memory.TryGetValue(key,out var obj);
+        return res;
+    }
+
+    // 加锁
+    public async Task<bool> AcquireAsync(string key, string value, TimeSpan span)
+    {
+        if(!IsEnabled) return false;
+        if (UseRedis)
+        {
+            return await _redis.GetDatabase().StringSetAsync(key, value, span, When.NotExists);
+        }
+
+        return false;
+    }
+
+    // 释放锁
+    public async Task<bool> ReleaseAsync(string key, string value)
+    {
+        const string lua = @"
+            if redis.call('GET', KEYS[1]) == ARGV[1] then
+                return redis.call('DEL', KEYS[1])
+            else
+                return 0
+            end";
+        if(!IsEnabled) return false;
+        if (UseRedis)
+        {
+            var n =  (int)await _redis.GetDatabase().ScriptEvaluateAsync(lua,
+                keys: [key],
+                values: [value]);
+            return n == 1;
+        }
+
+        return false;
+    }
+
+    // 续签
+    public async Task<bool> RenewAsync(string key, string value, TimeSpan span)
+    {
+        const string lua = @"
+            if redis.call('GET', KEYS[1]) == ARGV[1] then
+                return redis.call('EXPIRE', KEYS[1], ARGV[2])
+            else
+                return 0
+            end";
+        if(!IsEnabled) return false;
+        if (UseRedis)
+        {
+            var n =  (int)await _redis.GetDatabase().ScriptEvaluateAsync(lua,
+                keys: [key],
+                values: [value,(int)span.TotalSeconds]);
+            return n == 1;
+        }
+
+        return false;
     }
 
     private int GetExpiry(string resource)

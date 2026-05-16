@@ -47,5 +47,11 @@ public class AuthService(
         return (accessToken, newRefreshToken, expiresAt);
     }
 
-    public Task LogoutAsync(string refreshToken) => tokenService.RevokeRefreshTokenAsync(refreshToken);
+    public Task LogoutAsync(string refreshToken, string accessToken)
+    {
+        // 白名单方法，登出时直接将token删除
+        // return  cache.RemoveAsync(new[] { accessToken, refreshToken });
+        
+        return tokenService.ClearToken(accessToken,refreshToken);
+    }
 }

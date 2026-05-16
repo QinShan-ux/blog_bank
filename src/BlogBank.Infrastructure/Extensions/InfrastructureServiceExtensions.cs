@@ -72,8 +72,7 @@ public static class InfrastructureServiceExtensions
             configuration));
         services.AddScoped<ITokenService>(sp => new TokenService(
             configuration,
-            sp.GetService<IConnectionMultiplexer>(),
-            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
+            sp.GetRequiredService<ICacheService>()));
 
         services.AddScoped<IArticleRepository, ArticleRepository>();
         services.AddScoped<IEssayRepository, EssayRepository>();
@@ -85,7 +84,8 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<DataSeeder>();
-
+        services.AddScoped<IExportTaskRepository, ExportTaskRepository>();
+        
         return services;
     }
 }

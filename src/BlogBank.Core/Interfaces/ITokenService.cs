@@ -8,4 +8,6 @@ public interface ITokenService
     Task<string> GenerateRefreshTokenAsync(long userId);
     Task<long?> ValidateRefreshTokenAsync(string refreshToken);
     Task RevokeRefreshTokenAsync(string refreshToken);
+
+    Task ClearToken(string accessToken, string refreshToken);
 }

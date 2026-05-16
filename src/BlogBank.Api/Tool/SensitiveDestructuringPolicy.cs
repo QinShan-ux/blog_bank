@@ -1,5 +1,6 @@
 using System.Reflection;
 using BlogBank.Api.Filters;
+using BlogBank.Core.Attributes;
 using Serilog.Core;
 using Serilog.Events;
 

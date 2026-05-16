@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
@@ -35,6 +36,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BlogBank.Core\BlogBank.Core.csproj" />
     <ProjectReference Include="..\BlogBank.Infrastructure\BlogBank.Infrastructure.csproj" />
+    <ProjectReference Include="..\BlogBank.Service\BlogBank.Service.csproj" />
     
   </ItemGroup>
 

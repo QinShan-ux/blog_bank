@@ -12,6 +12,12 @@ public class TokenVersionMiddleware(RequestDelegate next)
         ILogger<TokenVersionMiddleware> logger)
     {
 
+        // SignalR 路径跳过检查
+        if (context.Request.Path.StartsWithSegments("/hubs"))
+        {
+            await next(context);
+            return;
+        }
         var path = context.Request.Path;
         // 如果是登录接口，不拦截
         if (!path.Equals("/api/auth/login"))

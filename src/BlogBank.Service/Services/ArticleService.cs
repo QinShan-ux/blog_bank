@@ -7,7 +7,7 @@ namespace BlogBank.Service.Services;
 
 public class ArticleService(IArticleRepository repo) : IArticleService
 {
-    public Task<IEnumerable<Article>> GetAllAsync() => repo.GetAllAsync();
+    public Task<IEnumerable<Article>> GetAllAsync(int page,int size) => repo.GetAllAsync(page,size);
 
     public Task<List<ArticleSummary>> GetIdTitleListAsync() => repo.GetIdTitleListAsync();
 

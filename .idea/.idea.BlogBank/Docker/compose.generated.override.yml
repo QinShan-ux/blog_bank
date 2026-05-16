@@ -1,0 +1,20 @@
+# 这是一个生成的文件。不用于手动编辑。
+services:
+  server:
+    build:
+      context: "D:\\blog\\bank"
+      dockerfile: "Dockerfile"
+      target: "build"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net9.0/BlogBank.Api.dll"
+    environment:
+      ASPNETCORE_STATICWEBASSETS: "/app/bin/Debug/net9.0/BlogBank.Api.staticwebassets.runtime.CT.json"
+    image: "blogbank.api:dev"
+    ports: []
+    volumes:
+    - "D:\\blog\\bank\\src\\BlogBank.Api:/app:rw"
+    - "D:\\blog\\bank:/src:rw"
+    - "C:\\Users\\Administrator\\.nuget\\packages:/root/.nuget/packages"
+    working_dir: "/app"

@@ -17,7 +17,7 @@ namespace BlogBank.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.15")
+                .HasAnnotation("ProductVersion", "9.0.16")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -390,6 +390,78 @@ namespace BlogBank.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BlogBank.Core.Entities.ExportTask", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasComment("主键");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasComment("完成时间");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)")
+                        .HasComment("创建时间");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasComment("错误信息");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasComment("文件地址");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("OperatorId")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasComment("操作人id");
+
+                    b.Property<int>("Progress")
+                        .HasColumnType("int")
+                        .HasComment("进度");
+
+                    b.Property<DateTime>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp(6)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasComment("状态");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)")
+                        .HasComment("修改时间");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("exportTask", null, t =>
+                        {
+                            t.HasComment("导出任务");
+                        });
+                });
+
             modelBuilder.Entity("BlogBank.Core.Entities.Menu", b =>
                 {
                     b.Property<long>("Id")
@@ -719,6 +791,21 @@ namespace BlogBank.Infrastructure.Migrations
                         {
                             t.HasComment("用户角色关联");
                         });
+                });
+
+            modelBuilder.Entity("BlogBank.Infrastructure.dtos.Procedures", b =>
+                {
+                    b.Property<string>("token_version")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("user_name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.ToTable((string)null);
+
+                    b.ToView(null, (string)null);
                 });
 
             modelBuilder.Entity("BlogBank.Core.Entities.ArticleTag", b =>

@@ -12,7 +12,7 @@ public interface IArticleRepository
     /// 获取所有文章，按发布日期倒序排列。
     /// </summary>
     /// <returns>文章集合。</returns>
-    Task<IEnumerable<Article>> GetAllAsync();
+    Task<IEnumerable<Article>> GetAllAsync(int page,int size);
 
     /// <summary>
     /// 按 ID 查询单篇文章。

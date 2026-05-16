@@ -24,13 +24,13 @@ public class UsersController(IUserService service, ICacheService cache, IMapper 
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
-        var cached = await cache.GetAsync("users:all");
-        if (cached != null)
-            return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
+        // var cached = await cache.GetAsync("users:all");
+        // if (cached != null)
+        //     return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
         var users = await service.GetAllAsync();
         var data = users.Select(ToResponse).ToList();
-        await cache.SetAsync("users:all", JsonSerializer.Serialize(data), "Users");
+        // await cache.SetAsync("users:all", JsonSerializer.Serialize(data), "Users");
         return Ok(data);
     }
 

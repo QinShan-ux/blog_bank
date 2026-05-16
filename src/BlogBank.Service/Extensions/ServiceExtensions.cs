@@ -17,6 +17,7 @@ public static class ServiceExtensions
         services.AddScoped<IUserMenuService, UserMenuService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IExportTaskService, ExportTaskService>();
         return services;
     }
 }

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using BlogBank.Core.Entities;
+using BlogBank.Core.Enums;
 using BlogBank.Core.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -11,9 +12,9 @@ using StackExchange.Redis;
 
 namespace BlogBank.Infrastructure.Services;
 
-public class TokenService(IConfiguration configuration, IConnectionMultiplexer? redis, IMemoryCache memory) : ITokenService
+public class TokenService(IConfiguration configuration, ICacheService cache) : ITokenService
 {
-    private bool UseRedis => redis is { IsConnected: true };
+    // private bool UseRedis => redis is { IsConnected: true };
 
     public (string token, DateTime expiresAt) GenerateAccessToken(User user)
     {
@@ -44,8 +45,11 @@ public class TokenService(IConfiguration configuration, IConnectionMultiplexer? 
             notBefore:          DateTime.UtcNow,
             expires:            expiresAt,
             signingCredentials: creds);
-
-        return (new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
+        var resToken = new JwtSecurityTokenHandler().WriteToken(token);
+        var id = new JwtSecurityTokenHandler().ReadJwtToken(resToken).Id;
+        var cacheKey = $"access_token:{id}";
+        cache.SetAsync(cacheKey, user.Id.ToString(), expMinutes, TimeEnum.Minute);
+        return (resToken, expiresAt);
     }
 
     public async Task<string> GenerateRefreshTokenAsync(long userId)
@@ -53,19 +57,8 @@ public class TokenService(IConfiguration configuration, IConnectionMultiplexer? 
         var expDays = int.TryParse(configuration["Jwt:RefreshTokenExpireDays"], out var d) ? d : 7;
         var token   = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         var cacheKey = $"refresh_token:{token}";
-        var expiry   = TimeSpan.FromDays(expDays);
 
-        if (UseRedis)
-        {
-            try
-            {
-                await redis!.GetDatabase().StringSetAsync(cacheKey, userId.ToString(), expiry);
-                return token;
-            }
-            catch { /* fall through */ }
-        }
-
-        memory.Set(cacheKey, userId.ToString(), expiry);
+        await cache.SetAsync(cacheKey, userId.ToString(), expDays, TimeEnum.Day);
         return token;
     }
 
@@ -73,36 +66,49 @@ public class TokenService(IConfiguration configuration, IConnectionMultiplexer? 
     {
         var cacheKey = $"refresh_token:{refreshToken}";
 
-        if (UseRedis)
-        {
-            try
-            {
-                var value = await redis!.GetDatabase().StringGetAsync(cacheKey);
-                if (value.HasValue)
-                    return long.TryParse(value, out var uid) ? uid : null;
-            }
-            catch { /* fall through */ }
-        }
+        var value = await cache.GetAsync(cacheKey);
+        if(!string.IsNullOrEmpty(value))
+            return long.TryParse(value, out var uid) ? uid : null;
+        return null;
+        // if (UseRedis)
+        // {
+        //     try
+        //     {
+        //         var value = await redis!.GetDatabase().StringGetAsync(cacheKey);
+        //         if (value.HasValue)
+        //             return long.TryParse(value, out var uid) ? uid : null;
+        //     }
+        //     catch { /* fall through */ }
+        // }
 
-        return memory.TryGetValue(cacheKey, out string? val) && long.TryParse(val, out var userId)
-            ? userId
-            : null;
+        // return memory.TryGetValue(cacheKey, out string? val) && long.TryParse(val, out var userId)
+        //     ? userId
+        //     : null;
     }
 
     public async Task RevokeRefreshTokenAsync(string refreshToken)
     {
         var cacheKey = $"refresh_token:{refreshToken}";
 
-        if (UseRedis)
-        {
-            try
-            {
-                await redis!.GetDatabase().KeyDeleteAsync(cacheKey);
-                return;
-            }
-            catch { /* fall through */ }
-        }
+        await cache.RemoveAsync(cacheKey);
+        // if (UseRedis)
+        // {
+        //     try
+        //     {
+        //         await redis!.GetDatabase().KeyDeleteAsync(cacheKey);
+        //         return;
+        //     }
+        //     catch { /* fall through */ }
+        // }
+        //
+        // memory.Remove(cacheKey);
+    }
 
-        memory.Remove(cacheKey);
+    public Task ClearToken(string accessToken, string refreshToken)
+    {
+        var id = new JwtSecurityTokenHandler().ReadJwtToken(accessToken).Id;
+        var accessCache = $"access_token:{id}";
+        var refreshCache = $"refresh_token:{refreshToken}";
+        return  cache.RemoveAsync(accessCache, refreshCache);
     }
 }

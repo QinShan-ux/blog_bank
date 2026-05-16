@@ -7,6 +7,7 @@ using BlogBank.Core.Entities;
 using BlogBank.Core.Enums;
 using BlogBank.Core.Interfaces;
 using BlogBank.Infrastructure.Data.filter;
+using BlogBank.Infrastructure.dtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -27,6 +28,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
     public DbSet<Menu> Menus => Set<Menu>();
     public DbSet<UserMenu> UserMenus => Set<UserMenu>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<ExportTask> ExportTasks => Set<ExportTask>();
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -68,7 +70,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
 
         #endregion
         
+        // 加载配置文件
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        modelBuilder.Entity<Procedures>()
+            .HasNoKey()
+            .ToView(null);
     }
 
     // 动态建立 Lambda：e => !e.IsDeleted
@@ -85,6 +92,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.AddInterceptors(new AuditInterceptor());
+        optionsBuilder.AddInterceptors(new SlowQueryInterceptor());
     }
 
     public override async Task<int> SaveChangesAsync(
@@ -93,24 +101,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
         // 1. 自动填充 CreatedAt / UpdatedAt / CreatedBy / UpdatedBy
         AutoFillAuditFields();
 
-        // 2. 在保存前捕获变更（必须在 SaveChanges 之前！此时 OriginalValue 还在）
-        var auditEntries = GetAuditEntries();
+        SaveAudit();
 
         // 3. 保存业务数据
         var result = await base.SaveChangesAsync(cancellationToken);
-
-        // 4. 保存审计日志（业务数据保存成功后再保存日志）
-        if (auditEntries.Any())
-        {
-            AuditLogs.AddRange(auditEntries);
-            await base.SaveChangesAsync(cancellationToken);
-        }
-
+        
         return result;
     }
 
     // 自动填充时间和操作人
-    private void AutoFillAuditFields()
+    protected virtual void AutoFillAuditFields()
     {
         var httpInfo = GetHttpInfo();
 
@@ -120,7 +120,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
             {
                 case EntityState.Added:
                     entry.Entity.CreatedAt = DateTime.Now;
-                    entry.Entity.CreatedBy = httpInfo?.UserName;
+                    entry.Entity.CreatedBy = httpInfo?.UserName ?? "测试";
                     entry.Entity.UpdatedAt = DateTime.Now;
                     entry.Entity.UpdatedBy = "---";
                     entry.Entity.Id = idGen.NextId();
@@ -128,7 +128,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
 
                 case EntityState.Modified:
                     entry.Entity.UpdatedAt = DateTime.Now;
-                    entry.Entity.UpdatedBy = httpInfo?.UserName;
+                    entry.Entity.UpdatedBy = httpInfo?.UserName ?? "background";
                     // 防止意外修改创建时间
                     entry.Property(e => e.CreatedAt).IsModified = false;
                     entry.Property(e => e.CreatedBy).IsModified = false;
@@ -137,6 +137,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
         }
     }
 
+    protected virtual void SaveAudit()
+    {
+        // 2. 在保存前捕获变更（必须在 SaveChanges 之前！此时 OriginalValue 还在）
+        var auditEntries = GetAuditEntries();
+        
+        // 4. 保存审计日志（业务数据保存成功后再保存日志）
+        if (auditEntries.Any())
+        {
+            AuditLogs.AddRange(auditEntries);
+        }
+    }
     // 捕获所有变更，生成审计日志
     private List<AuditLog> GetAuditEntries()
     {
@@ -151,12 +162,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
             {
                 Id = idGen.NextId(),
                 // HTTP 层信息（来自 ActionFilter）
-                TraceId = httpInfo.TraceId,
-                UserId = httpInfo.UserId,
-                UserName = httpInfo.UserName,
-                RequestUrl = httpInfo.RequestUrl,
-                IpAddress = httpInfo.IpAddress,
-                HttpMethod = httpInfo.HttpMethod,
+                TraceId = httpInfo.TraceId ?? "background",
+                UserId = httpInfo.UserId ?? "background",
+                UserName = httpInfo.UserName ?? "background",
+                RequestUrl = httpInfo.RequestUrl ?? "background",
+                IpAddress = httpInfo.IpAddress ?? "background",
+                HttpMethod = httpInfo.HttpMethod ?? "background",
                 OperatedAt = httpInfo?.OperatedAt ?? DateTime.Now,
 
                 // 数据层信息（ChangeTracker 天然知道）

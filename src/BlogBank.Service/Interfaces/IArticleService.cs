@@ -5,7 +5,7 @@ namespace BlogBank.Service.Interfaces;
 
 public interface IArticleService
 {
-    Task<IEnumerable<Article>> GetAllAsync();
+    Task<IEnumerable<Article>> GetAllAsync(int page,int size);
     Task<List<ArticleSummary>> GetIdTitleListAsync();
     Task<Article?> GetByIdAsync(long id);
     Task<Article> CreateAsync(Article article);

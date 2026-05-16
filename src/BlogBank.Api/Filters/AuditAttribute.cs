@@ -6,10 +6,11 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace BlogBank.Api.Filters;
-
+// action之前动作，获取请求来源的信息，ip地址等
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
 public class AuditAttribute : ActionFilterAttribute
 {
+    
     public override async Task OnActionExecutionAsync(
         ActionExecutingContext context,
         ActionExecutionDelegate next)
@@ -27,7 +28,7 @@ public class AuditAttribute : ActionFilterAttribute
 
             // 请求信息
             RequestUrl = context.HttpContext.Request.Path,
-            HttpMethod = context.HttpContext.Request.Method,
+             HttpMethod = context.HttpContext.Request.Method,
             IpAddress  = context.HttpContext.Connection.RemoteIpAddress?.ToString(),
             OperatedAt = DateTime.Now
         };

@@ -21,15 +21,15 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
     // GET /api/articles
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(int page,int size)
     {
-        var cached = await cache.GetAsync("articles:all");
+        var cached = await cache.GetAsync($"articles:{page}:{size}");
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var articles = await service.GetAllAsync();
+        var articles = await service.GetAllAsync(page,size);
         var data = articles.Select(ToResponse).ToList();
-        await cache.SetAsync("articles:all", JsonSerializer.Serialize(data), "Articles");
+        await cache.SetAsync($"articles:{page}:{size}", JsonSerializer.Serialize(data), "Articles");
         return Ok(data);
     }
 
@@ -54,6 +54,7 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
     [HttpGet("{id:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [Audit]
     public async Task<IActionResult> GetById(long id)
     {
         var cached = await cache.GetAsync($"articles:{id}");

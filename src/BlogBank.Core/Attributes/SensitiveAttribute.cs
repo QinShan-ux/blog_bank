@@ -1,7 +1,9 @@
 ﻿using BlogBank.Core.Enums;
 
-namespace BlogBank.Api.Filters;
-
+namespace BlogBank.Core.Attributes;
+/// <summary>
+/// 敏感词
+/// </summary>
 [AttributeUsage(AttributeTargets.Property)]
 public class SensitiveAttribute : Attribute
 {

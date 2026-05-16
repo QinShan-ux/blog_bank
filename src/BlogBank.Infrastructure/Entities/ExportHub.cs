@@ -1,0 +1,2 @@
+﻿namespace BlogBank.Infrastructure.Entities;
+

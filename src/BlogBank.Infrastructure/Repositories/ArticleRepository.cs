@@ -14,14 +14,19 @@ public class ArticleRepository(AppDbContext db, ISnowflakeIdGenerator idGen) : I
     /// <summary>
     /// 获取所有文章及其标签，按发布日期倒序排列。
     /// </summary>
-    public async Task<IEnumerable<Article>> GetAllAsync()
+    public async Task<IEnumerable<Article>> GetAllAsync(int page,int size)
     {
-        return await db.Articles
-            .AsNoTracking()
+        var subQuery = db.Articles.AsNoTracking()
+            .Skip(page * size)
+            .Take(size)
+            .Select(it => it.Id);
+        var res = await db.Articles.AsNoTracking()
+            .Join(subQuery, a => a.Id, id => id, ((a, id) => a))
+            .OrderByDescending(article => article.CreatedAt)
             .Include(a => a.Tags)
-            .OrderByDescending(a => a.Date)
             .AsNoTracking()
             .ToListAsync();
+        return res;
     }
 
     /// <summary>
@@ -115,7 +120,11 @@ public class ArticleRepository(AppDbContext db, ISnowflakeIdGenerator idGen) : I
         {
             article.Id = idGen.NextId();
             foreach (var tag in article.Tags)
+            {
                 tag.ArticleId = article.Id;
+                tag.Id = idGen.NextId();
+            }
+                
         }
 
         db.Articles.AddRange(list);
