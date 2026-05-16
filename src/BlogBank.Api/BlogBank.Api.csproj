@@ -31,6 +31,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BlogBank.Core\BlogBank.Core.csproj" />
     <ProjectReference Include="..\BlogBank.Infrastructure\BlogBank.Infrastructure.csproj" />
+    <ProjectReference Include="..\BlogBank.Service\BlogBank.Service.csproj" />
   </ItemGroup>
 
 </Project>

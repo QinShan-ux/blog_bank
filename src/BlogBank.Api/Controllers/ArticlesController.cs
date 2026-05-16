@@ -3,6 +3,7 @@ using BlogBank.Api.Filters;
 using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
 using BlogBank.Core.Interfaces;
+using BlogBank.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,7 +15,7 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/articles")]
-public class ArticlesController(IArticleRepository repo, ICacheService cache) : ControllerBase
+public class ArticlesController(IArticleService service, ICacheService cache) : ControllerBase
 {
     /// <summary>获取所有文章列表，按发布日期倒序排列。</summary>
     // GET /api/articles
@@ -26,7 +27,7 @@ public class ArticlesController(IArticleRepository repo, ICacheService cache) : 
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var articles = await repo.GetAllAsync();
+        var articles = await service.GetAllAsync();
         var data = articles.Select(ToResponse).ToList();
         await cache.SetAsync("articles:all", JsonSerializer.Serialize(data), "Articles");
         return Ok(data);
@@ -42,7 +43,7 @@ public class ArticlesController(IArticleRepository repo, ICacheService cache) : 
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var list = await repo.GetIdTitleListAsync();
+        var list = await service.GetIdTitleListAsync();
         var data = list.Select(x => new { id = x.Id.ToString(), title = x.Title }).ToList();
         await cache.SetAsync("articles:titles", JsonSerializer.Serialize(data), "Articles");
         return Ok(data);
@@ -59,7 +60,7 @@ public class ArticlesController(IArticleRepository repo, ICacheService cache) : 
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var article = await repo.GetByIdAsync(id);
+        var article = await service.GetByIdAsync(id);
         if (article is null) return NotFound();
 
         var data = ToResponse(article);
@@ -74,7 +75,7 @@ public class ArticlesController(IArticleRepository repo, ICacheService cache) : 
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] ArticleRequest req)
     {
-        var created = await repo.CreateAsync(ToEntity(req));
+        var created = await service.CreateAsync(ToEntity(req));
         await cache.RemoveAsync("articles:all", "articles:titles");
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToResponse(created));
     }
@@ -89,7 +90,7 @@ public class ArticlesController(IArticleRepository repo, ICacheService cache) : 
         if (reqs.Count == 0)
             return BadRequest(new { message = "请求列表不能为空。" });
 
-        var created = await repo.CreateBatchAsync(reqs.Select(ToEntity));
+        var created = await service.CreateBatchAsync(reqs.Select(ToEntity));
         await cache.RemoveAsync("articles:all", "articles:titles");
         return StatusCode(StatusCodes.Status201Created, created.Select(ToResponse));
     }
@@ -103,7 +104,7 @@ public class ArticlesController(IArticleRepository repo, ICacheService cache) : 
     [Audit]
     public async Task<IActionResult> Update(long id, [FromBody] ArticleRequest req)
     {
-        var updated = await repo.UpdateAsync(id, ToEntity(req));
+        var updated = await service.UpdateAsync(id, ToEntity(req));
         if (updated is null) return NotFound();
         await cache.RemoveAsync("articles:all", "articles:titles", $"articles:{id}");
         return Ok(ToResponse(updated));
@@ -116,13 +117,12 @@ public class ArticlesController(IArticleRepository repo, ICacheService cache) : 
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id)
     {
-        var deleted = await repo.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();
         await cache.RemoveAsync("articles:all", "articles:titles", $"articles:{id}");
         return NoContent();
     }
 
-    /// <summary>将请求体映射为文章实体。</summary>
     private static Article ToEntity(ArticleRequest req) => new()
     {
         Title = req.Title,
@@ -134,7 +134,6 @@ public class ArticlesController(IArticleRepository repo, ICacheService cache) : 
         Tags = req.Tags.Select(t => new ArticleTag { Tag = t }).ToList()
     };
 
-    /// <summary>将文章实体映射为 API 响应对象；id 序列化为字符串，避免 JavaScript 53 位精度丢失。</summary>
     private static object ToResponse(Article a) => new
     {
         id = a.Id.ToString(),

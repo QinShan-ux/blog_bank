@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace BlogBank.Core.Entities;
 
 /// <summary>
@@ -36,6 +38,12 @@ public class Article: BaseEntity
     /// 文章正文，HTML 格式字符串。
     /// </summary>
     public string Content { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// 乐观锁版本号
+    /// </summary>
+    [Timestamp]
+    public byte[] RowVersion { get; set; }
 
     /// <summary>
     /// 标签列表，用于筛选过滤。

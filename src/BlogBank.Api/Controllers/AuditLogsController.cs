@@ -1,6 +1,6 @@
 using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
-using BlogBank.Core.Interfaces;
+using BlogBank.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +12,7 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/audit-logs")]
-public class AuditLogsController(IAuditLogRepository repo) : ControllerBase
+public class AuditLogsController(IAuditLogService service) : ControllerBase
 {
     /// <summary>
     /// 分页查询操作日志，支持按操作人、操作类型、表名、时间范围过滤。
@@ -32,7 +32,7 @@ public class AuditLogsController(IAuditLogRepository repo) : ControllerBase
         if (page < 1) page = 1;
         if (pageSize is < 1 or > 100) pageSize = 20;
 
-        var (items, total) = await repo.GetPagedAsync(page, pageSize, userId, action, tableName, startTime, endTime);
+        var (items, total) = await service.GetPagedAsync(page, pageSize, userId, action, tableName, startTime, endTime);
         return Ok(new { total, page, pageSize, items });
     }
 
@@ -43,7 +43,7 @@ public class AuditLogsController(IAuditLogRepository repo) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
-        var log = await repo.GetByIdAsync(id);
+        var log = await service.GetByIdAsync(id);
         if (log is null) return NotFound();
         return Ok(log);
     }
@@ -55,7 +55,7 @@ public class AuditLogsController(IAuditLogRepository repo) : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] AuditLogRequest req)
     {
-        var created = await repo.CreateAsync(ToEntity(req));
+        var created = await service.CreateAsync(ToEntity(req));
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -66,7 +66,7 @@ public class AuditLogsController(IAuditLogRepository repo) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await repo.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();
         return NoContent();
     }

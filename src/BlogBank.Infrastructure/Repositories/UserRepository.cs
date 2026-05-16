@@ -131,4 +131,9 @@ public class UserRepository(AppDbContext db, ISnowflakeIdGenerator idGen,ILogger
         }
         
     }
+
+    private int GetAge()
+    {
+        return 0;
+    }
 }

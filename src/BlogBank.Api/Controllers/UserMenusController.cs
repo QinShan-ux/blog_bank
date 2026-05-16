@@ -1,6 +1,7 @@
 using System.Text.Json;
 using BlogBank.Api.Models;
 using BlogBank.Core.Interfaces;
+using BlogBank.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,11 +13,10 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/user-menus")]
-public class UserMenusController(IUserMenuRepository repo, ICacheService cache) : ControllerBase
+public class UserMenusController(IUserMenuService service, ICacheService cache) : ControllerBase
 {
     /// <summary>
     /// 查询指定用户拥有的所有菜单权限，按排序号升序排列。
-    /// UserId 以字符串形式传入路由，避免 JavaScript 53 位精度丢失。
     /// </summary>
     // GET /api/user-menus/user/{userId}
     [HttpGet("user/{userId:long}")]
@@ -27,7 +27,7 @@ public class UserMenusController(IUserMenuRepository repo, ICacheService cache) 
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var items = await repo.GetByUserIdAsync(userId);
+        var items = await service.GetByUserIdAsync(userId);
         var data = items.Select(um => new
         {
             userId     = um.UserId.ToString(),
@@ -40,9 +40,7 @@ public class UserMenusController(IUserMenuRepository repo, ICacheService cache) 
         return Ok(data);
     }
 
-    /// <summary>
-    /// 为用户分配单个菜单权限；若关联已存在则幂等返回，不会重复创建。
-    /// </summary>
+    /// <summary>为用户分配单个菜单权限；若关联已存在则幂等返回。</summary>
     // POST /api/user-menus
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -52,7 +50,7 @@ public class UserMenusController(IUserMenuRepository repo, ICacheService cache) 
         if (!long.TryParse(req.UserId, out var userId))
             return BadRequest(new { message = "UserId 格式无效。" });
 
-        var userMenu = await repo.AssignAsync(userId, req.MenuId);
+        var userMenu = await service.AssignAsync(userId, req.MenuId);
         await cache.RemoveAsync($"user-menus:user:{userId}");
         return Ok(new
         {
@@ -62,9 +60,7 @@ public class UserMenusController(IUserMenuRepository repo, ICacheService cache) 
         });
     }
 
-    /// <summary>
-    /// 批量为用户分配菜单权限，自动跳过已存在的关联，返回本次实际新增数量。
-    /// </summary>
+    /// <summary>批量为用户分配菜单权限，自动跳过已存在的关联，返回本次实际新增数量。</summary>
     // POST /api/user-menus/batch
     [HttpPost("batch")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -74,14 +70,12 @@ public class UserMenusController(IUserMenuRepository repo, ICacheService cache) 
         if (!long.TryParse(req.UserId, out var userId))
             return BadRequest(new { message = "UserId 格式无效。" });
 
-        var added = await repo.BatchAssignAsync(userId, req.MenuIds);
+        var added = await service.BatchAssignAsync(userId, req.MenuIds);
         await cache.RemoveAsync($"user-menus:user:{userId}");
         return Ok(new { added });
     }
 
-    /// <summary>
-    /// 重置用户的菜单权限：清除全部旧关联，再全量写入新关联，一次事务完成。
-    /// </summary>
+    /// <summary>重置用户的菜单权限：清除全部旧关联，再全量写入新关联。</summary>
     // PUT /api/user-menus/reset
     [HttpPut("reset")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -91,14 +85,12 @@ public class UserMenusController(IUserMenuRepository repo, ICacheService cache) 
         if (!long.TryParse(req.UserId, out var userId))
             return BadRequest(new { message = "UserId 格式无效。" });
 
-        await repo.ResetAsync(userId, req.MenuIds);
+        await service.ResetAsync(userId, req.MenuIds);
         await cache.RemoveAsync($"user-menus:user:{userId}");
         return NoContent();
     }
 
-    /// <summary>
-    /// 撤销用户的指定菜单权限；关联不存在时返回 404 Not Found。
-    /// </summary>
+    /// <summary>撤销用户的指定菜单权限；关联不存在时返回 404 Not Found。</summary>
     // DELETE /api/user-menus
     [HttpDelete]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -109,7 +101,7 @@ public class UserMenusController(IUserMenuRepository repo, ICacheService cache) 
         if (!long.TryParse(req.UserId, out var userId))
             return BadRequest(new { message = "UserId 格式无效。" });
 
-        var revoked = await repo.RevokeAsync(userId, req.MenuId);
+        var revoked = await service.RevokeAsync(userId, req.MenuId);
         if (!revoked) return NotFound();
         await cache.RemoveAsync($"user-menus:user:{userId}");
         return NoContent();

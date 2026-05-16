@@ -6,6 +6,7 @@ using BlogBank.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
 namespace BlogBank.Infrastructure.Extensions;
@@ -43,6 +44,9 @@ public static class InfrastructureServiceExtensions
                     throw new InvalidOperationException(
                         $"Unsupported DatabaseProvider: '{provider}'. Valid values are 'mysql' or 'postgresql'.");
             }
+
+            options.LogTo(Console.WriteLine, LogLevel.Information) //输出所有sql
+                .EnableSensitiveDataLogging(); //显示参数
         });
         services.AddHttpContextAccessor();
 

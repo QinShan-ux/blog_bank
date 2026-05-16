@@ -5,6 +5,7 @@ using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
 using BlogBank.Core.Interfaces;
 using BlogBank.Infrastructure.dtos;
+using BlogBank.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,7 +17,7 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/roles")]
-public class RolesController(IRoleRepository repo, ICacheService cache,IMapper mapper) : ControllerBase
+public class RolesController(IRoleService service, ICacheService cache, IMapper mapper) : ControllerBase
 {
     /// <summary>获取所有角色列表，按创建时间倒序排列。</summary>
     // GET /api/roles
@@ -28,7 +29,7 @@ public class RolesController(IRoleRepository repo, ICacheService cache,IMapper m
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var roles = await repo.GetAllAsync();
+        var roles = await service.GetAllAsync();
         var data = roles.Select(ToResponse).ToList();
         await cache.SetAsync("roles:all", JsonSerializer.Serialize(data), "Roles");
         return Ok(data);
@@ -45,12 +46,10 @@ public class RolesController(IRoleRepository repo, ICacheService cache,IMapper m
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var role = await repo.GetByIdAsync(id);
+        var role = await service.GetByIdAsync(id);
         var res = mapper.Map<RoleDto>(role);
         if (role is null) return NotFound();
 
-        // var data = ToResponse(role);
-        // await cache.SetAsync($"roles:{id}", JsonSerializer.Serialize(data), "Roles");
         return Ok(res);
     }
 
@@ -66,10 +65,10 @@ public class RolesController(IRoleRepository repo, ICacheService cache,IMapper m
     [Audit]
     public async Task<IActionResult> Create([FromBody] RoleRequest req)
     {
-        if (await repo.CodeExistsAsync(req.Code))
+        if (await service.CodeExistsAsync(req.Code))
             return Conflict(new { message = $"角色编码 '{req.Code}' 已被使用。" });
 
-        var created = await repo.CreateAsync(ToEntity(req));
+        var created = await service.CreateAsync(ToEntity(req));
         await cache.RemoveAsync("roles:all");
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToResponse(created));
     }
@@ -85,10 +84,10 @@ public class RolesController(IRoleRepository repo, ICacheService cache,IMapper m
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(int id, [FromBody] RoleRequest req)
     {
-        if (await repo.CodeExistsAsync(req.Code, excludeId: id))
+        if (await service.CodeExistsAsync(req.Code, excludeId: id))
             return Conflict(new { message = $"角色编码 '{req.Code}' 已被使用。" });
 
-        var updated = await repo.UpdateAsync(id, ToEntity(req));
+        var updated = await service.UpdateAsync(id, ToEntity(req));
         if (updated is null) return NotFound();
         await cache.RemoveAsync("roles:all", $"roles:{id}");
         return Ok(ToResponse(updated));
@@ -101,25 +100,23 @@ public class RolesController(IRoleRepository repo, ICacheService cache,IMapper m
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await repo.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();
         await cache.RemoveAsync("roles:all", $"roles:{id}");
         return NoContent();
     }
 
-    /// <summary>将请求体映射为角色实体。</summary>
     private static Role ToEntity(RoleRequest req) => new()
     {
         Code        = req.Code,
         Name        = req.Name,
         Description = req.Description,
-        CreatedAt = DateTime.Now,
-        UpdatedAt = DateTime.Now,
-        CreatedBy = "--",
-        UpdatedBy = "--",
+        CreatedAt   = DateTime.Now,
+        UpdatedAt   = DateTime.Now,
+        CreatedBy   = "--",
+        UpdatedBy   = "--",
     };
 
-    /// <summary>将角色实体映射为 API 响应对象。</summary>
     private static object ToResponse(Role r) => new
     {
         id          = r.Id,
@@ -127,6 +124,5 @@ public class RolesController(IRoleRepository repo, ICacheService cache,IMapper m
         name        = r.Name,
         description = r.Description,
         createdAt   = r.CreatedAt,
-        
     };
 }

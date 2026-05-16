@@ -11,7 +11,11 @@ public class LoginRequestExampleFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        if (context.MethodInfo.Name != "Login") return;
+        var info = context.MethodInfo.DeclaringType;
+        var controllerName = info.Name;
+        var functionName = context.MethodInfo.Name;
+        if (functionName != "Login") return;
+
 
         if (operation.RequestBody?.Content.TryGetValue("application/json", out var mediaType) == true)
         {

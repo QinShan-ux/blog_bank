@@ -7,6 +7,7 @@ using BlogBank.Api.Swagger;
 using BlogBank.Api.Tool;
 using BlogBank.Infrastructure.Data;
 using BlogBank.Infrastructure.Extensions;
+using BlogBank.Service.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,7 @@ builder.Services.AddControllers(options =>
 {
     // 注册过滤器
     options.Filters.Add<AuditAttribute>();
+    options.Filters.Add<DataMaskFilter>();
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -66,6 +68,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplicationServices();
 builder.Services.AddHttpContextAccessor();
 
 var jwtKey = builder.Configuration["Jwt:SecretKey"]

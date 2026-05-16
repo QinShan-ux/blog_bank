@@ -4,6 +4,7 @@ using BlogBank.Api.Dtos;
 using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
 using BlogBank.Core.Interfaces;
+using BlogBank.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,7 +16,7 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/users")]
-public class UsersController(IUserRepository repo, ICacheService cache,IMapper mapper,ILogger<UsersController> logger) : ControllerBase
+public class UsersController(IUserService service, ICacheService cache, IMapper mapper, ILogger<UsersController> logger) : ControllerBase
 {
     /// <summary>获取所有用户列表，按创建时间倒序排列。</summary>
     // GET /api/users
@@ -27,7 +28,7 @@ public class UsersController(IUserRepository repo, ICacheService cache,IMapper m
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var users = await repo.GetAllAsync();
+        var users = await service.GetAllAsync();
         var data = users.Select(ToResponse).ToList();
         await cache.SetAsync("users:all", JsonSerializer.Serialize(data), "Users");
         return Ok(data);
@@ -40,17 +41,16 @@ public class UsersController(IUserRepository repo, ICacheService cache,IMapper m
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(long id)
     {
-        // var cached = await cache.GetAsync($"users:{id}");
-        // if (cached != null)
-        //     return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
+        var cached = await cache.GetAsync($"users:{id}");
+        if (cached != null)
+            return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var user = await repo.GetByIdAsync(id);
+        var user = await service.GetByIdAsync(id);
         var res = mapper.Map<UserTestDto>(user);
-        logger.LogInformation("用户信息 {@user}",res);
+        logger.LogInformation("用户信息 {@user}", res);
         logger.LogInformation(res.youxiang);
         if (user is null) return NotFound();
 
-        // var data = ToResponse(user);
         await cache.SetAsync($"users:{id}", JsonSerializer.Serialize(res), "Users");
         return Ok(res);
     }
@@ -66,13 +66,13 @@ public class UsersController(IUserRepository repo, ICacheService cache,IMapper m
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create([FromBody] UserRequest req)
     {
-        if (await repo.UsernameExistsAsync(req.Username))
+        if (await service.UsernameExistsAsync(req.Username))
             return Conflict(new { message = $"用户名 '{req.Username}' 已被使用。" });
 
-        if (await repo.EmailExistsAsync(req.Email))
+        if (await service.EmailExistsAsync(req.Email))
             return Conflict(new { message = $"邮箱 '{req.Email}' 已被使用。" });
 
-        var created = await repo.CreateAsync(ToEntity(req));
+        var created = await service.CreateAsync(ToEntity(req));
         await cache.RemoveAsync("users:all");
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToResponse(created));
     }
@@ -88,13 +88,13 @@ public class UsersController(IUserRepository repo, ICacheService cache,IMapper m
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(long id, [FromBody] UserRequest req)
     {
-        if (await repo.UsernameExistsAsync(req.Username, excludeId: id))
+        if (await service.UsernameExistsAsync(req.Username, excludeId: id))
             return Conflict(new { message = $"用户名 '{req.Username}' 已被使用。" });
 
-        if (await repo.EmailExistsAsync(req.Email, excludeId: id))
+        if (await service.EmailExistsAsync(req.Email, excludeId: id))
             return Conflict(new { message = $"邮箱 '{req.Email}' 已被使用。" });
 
-        var updated = await repo.UpdateAsync(id, ToEntity(req));
+        var updated = await service.UpdateAsync(id, ToEntity(req));
         if (updated is null) return NotFound();
         await cache.RemoveAsync("users:all", $"users:{id}");
         return Ok(ToResponse(updated));
@@ -107,13 +107,12 @@ public class UsersController(IUserRepository repo, ICacheService cache,IMapper m
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id)
     {
-        var deleted = await repo.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();
         await cache.RemoveAsync("users:all", $"users:{id}");
         return NoContent();
     }
 
-    /// <summary>将请求体映射为用户实体；密码字段直接存储（生产环境应在此处进行哈希处理）。</summary>
     private static User ToEntity(UserRequest req) => new()
     {
         Username     = req.Username,
@@ -126,7 +125,6 @@ public class UsersController(IUserRepository repo, ICacheService cache,IMapper m
         IsEnabled    = req.IsEnabled
     };
 
-    /// <summary>将用户实体映射为 API 响应对象；id 序列化为字符串，避免 JavaScript 53 位精度丢失。</summary>
     private static object ToResponse(User u) => new
     {
         id        = u.Id.ToString(),

@@ -49,6 +49,16 @@ public class User: BaseEntity
     /// </summary>
     public int TokenVersion { get; set; }
     
+    /// <summary>
+    /// 生日
+    /// </summary>
+    public DateOnly? Birthday { get; set; }
+    
+    /// <summary>
+    /// 地址
+    /// </summary>
+    public string? Address { get; set; }
+    
 
     /// <summary>
     /// 用户拥有的角色关联列表。

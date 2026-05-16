@@ -3,6 +3,7 @@ using BlogBank.Api.Filters;
 using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
 using BlogBank.Core.Interfaces;
+using BlogBank.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,7 +15,7 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/essays")]
-public class EssaysController(IEssayRepository repo, ICacheService cache) : ControllerBase
+public class EssaysController(IEssayService service, ICacheService cache) : ControllerBase
 {
     /// <summary>获取所有随笔列表，按发布日期倒序排列。</summary>
     // GET /api/essays
@@ -26,7 +27,7 @@ public class EssaysController(IEssayRepository repo, ICacheService cache) : Cont
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var essays = await repo.GetAllAsync();
+        var essays = await service.GetAllAsync();
         var data = essays.Select(ToResponse).ToList();
         await cache.SetAsync("essays:all", JsonSerializer.Serialize(data), "Essays");
         return Ok(data);
@@ -43,7 +44,7 @@ public class EssaysController(IEssayRepository repo, ICacheService cache) : Cont
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var essay = await repo.GetByIdAsync(id);
+        var essay = await service.GetByIdAsync(id);
         if (essay is null) return NotFound();
 
         var data = ToResponse(essay);
@@ -59,7 +60,7 @@ public class EssaysController(IEssayRepository repo, ICacheService cache) : Cont
     [Audit]
     public async Task<IActionResult> Create([FromBody] EssayRequest req)
     {
-        var created = await repo.CreateAsync(ToEntity(req));
+        var created = await service.CreateAsync(ToEntity(req));
         await cache.RemoveAsync("essays:all");
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToResponse(created));
     }
@@ -74,7 +75,7 @@ public class EssaysController(IEssayRepository repo, ICacheService cache) : Cont
         if (reqs.Count == 0)
             return BadRequest(new { message = "请求列表不能为空。" });
 
-        var created = await repo.CreateBatchAsync(reqs.Select(ToEntity));
+        var created = await service.CreateBatchAsync(reqs.Select(ToEntity));
         await cache.RemoveAsync("essays:all");
         return StatusCode(StatusCodes.Status201Created, created.Select(ToResponse));
     }
@@ -87,7 +88,7 @@ public class EssaysController(IEssayRepository repo, ICacheService cache) : Cont
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(long id, [FromBody] EssayRequest req)
     {
-        var updated = await repo.UpdateAsync(id, ToEntity(req));
+        var updated = await service.UpdateAsync(id, ToEntity(req));
         if (updated is null) return NotFound();
         await cache.RemoveAsync("essays:all", $"essays:{id}");
         return Ok(ToResponse(updated));
@@ -100,13 +101,12 @@ public class EssaysController(IEssayRepository repo, ICacheService cache) : Cont
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id)
     {
-        var deleted = await repo.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();
         await cache.RemoveAsync("essays:all", $"essays:{id}");
         return NoContent();
     }
 
-    /// <summary>将请求体映射为随笔实体。</summary>
     private static Essay ToEntity(EssayRequest req) => new()
     {
         Title       = req.Title,
@@ -122,7 +122,6 @@ public class EssaysController(IEssayRepository repo, ICacheService cache) : Cont
         Tags        = req.Tags.Select(t => new EssayTag { Tag = t }).ToList()
     };
 
-    /// <summary>将随笔实体映射为 API 响应对象；id 序列化为字符串，避免 JavaScript 53 位精度丢失。</summary>
     private static object ToResponse(Essay e) => new
     {
         id          = e.Id.ToString(),

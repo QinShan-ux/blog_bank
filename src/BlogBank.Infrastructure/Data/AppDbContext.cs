@@ -121,6 +121,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
                 case EntityState.Added:
                     entry.Entity.CreatedAt = DateTime.Now;
                     entry.Entity.CreatedBy = httpInfo?.UserName;
+                    entry.Entity.UpdatedAt = DateTime.Now;
+                    entry.Entity.UpdatedBy = "---";
                     entry.Entity.Id = idGen.NextId();
                     break;
 
@@ -188,7 +190,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
     private AuditHttpInfo GetHttpInfo()
     {
         return httpContextAccessor.HttpContext?
-            .Items["AuditInfo"] as AuditHttpInfo ;
+            .Items["AuditInfo"] as AuditHttpInfo ?? new AuditHttpInfo() ;
     }
 
     private string GetNewValues(EntityEntry<BaseEntity> e)

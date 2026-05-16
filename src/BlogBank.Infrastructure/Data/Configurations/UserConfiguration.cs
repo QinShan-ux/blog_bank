@@ -26,6 +26,11 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
         entity.Property(u => u.Email)
             .HasMaxLength(200).IsRequired()
             .HasComment("邮箱地址，全局唯一");
+        entity.Property(u => u.Birthday)
+            .HasComment("生日");
+        entity.Property(u => u.Address)
+            .HasMaxLength(500)
+            .HasComment("地址");
         entity.Property(u => u.PasswordHash)
             .HasMaxLength(500).IsRequired()
             .HasComment("经过哈希处理的密码");
@@ -38,7 +43,9 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
             .HasComment("创建时间");
         entity.Property(u => u.UpdatedAt)
             .HasComment("最后更新时间");
-
+        entity.Property(u => u.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
         entity.HasIndex(u => u.Username).IsUnique();
         entity.HasIndex(u => u.Email).IsUnique();
     }

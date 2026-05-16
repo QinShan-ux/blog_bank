@@ -2,6 +2,7 @@ using System.Text.Json;
 using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
 using BlogBank.Core.Interfaces;
+using BlogBank.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +14,7 @@ namespace BlogBank.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/menus")]
-public class MenusController(IMenuRepository repo, ICacheService cache) : ControllerBase
+public class MenusController(IMenuService service, ICacheService cache) : ControllerBase
 {
     /// <summary>获取所有菜单扁平列表，按排序号升序排列。</summary>
     // GET /api/menus
@@ -25,7 +26,7 @@ public class MenusController(IMenuRepository repo, ICacheService cache) : Contro
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var menus = await repo.GetAllAsync();
+        var menus = await service.GetAllAsync();
         var data = menus.Select(ToResponse).ToList();
         await cache.SetAsync("menus:all", JsonSerializer.Serialize(data), "Menus");
         return Ok(data);
@@ -41,7 +42,7 @@ public class MenusController(IMenuRepository repo, ICacheService cache) : Contro
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var all = (await repo.GetAllAsync()).ToList();
+        var all = (await service.GetAllAsync()).ToList();
         var tree = BuildTree(all, 0);
         await cache.SetAsync("menus:tree", JsonSerializer.Serialize(tree), "Menus");
         return Ok(tree);
@@ -58,7 +59,7 @@ public class MenusController(IMenuRepository repo, ICacheService cache) : Contro
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
-        var menu = await repo.GetByIdAsync(id);
+        var menu = await service.GetByIdAsync(id);
         if (menu is null) return NotFound();
 
         var data = ToResponse(menu);
@@ -73,7 +74,7 @@ public class MenusController(IMenuRepository repo, ICacheService cache) : Contro
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] MenuRequest req)
     {
-        var created = await repo.CreateAsync(ToEntity(req));
+        var created = await service.CreateAsync(ToEntity(req));
         await cache.RemoveAsync("menus:all", "menus:tree");
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToResponse(created));
     }
@@ -86,7 +87,7 @@ public class MenusController(IMenuRepository repo, ICacheService cache) : Contro
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(long id, [FromBody] MenuRequest req)
     {
-        var updated = await repo.UpdateAsync(id, ToEntity(req));
+        var updated = await service.UpdateAsync(id, ToEntity(req));
         if (updated is null) return NotFound();
         await cache.RemoveAsync("menus:all", "menus:tree", $"menus:{id}");
         return Ok(ToResponse(updated));
@@ -102,16 +103,15 @@ public class MenusController(IMenuRepository repo, ICacheService cache) : Contro
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id)
     {
-        if (await repo.HasChildrenAsync(id))
+        if (await service.HasChildrenAsync(id))
             return BadRequest(new { message = "该菜单下存在子菜单，请先删除子菜单。" });
 
-        var deleted = await repo.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();
         await cache.RemoveAsync("menus:all", "menus:tree", $"menus:{id}");
         return NoContent();
     }
 
-    /// <summary>将请求体映射为菜单实体。</summary>
     private static Menu ToEntity(MenuRequest req) => new()
     {
         Pid         = req.Pid,
@@ -133,7 +133,6 @@ public class MenusController(IMenuRepository repo, ICacheService cache) : Contro
         Remark      = req.Remark
     };
 
-    /// <summary>将菜单实体映射为 API 响应对象；id 序列化为字符串，避免 JavaScript 53 位精度丢失。</summary>
     private static object ToResponse(Menu m) => new
     {
         id          = m.Id.ToString(),
@@ -156,7 +155,6 @@ public class MenusController(IMenuRepository repo, ICacheService cache) : Contro
         remark      = m.Remark
     };
 
-    /// <summary>递归构建树形结构响应；children 以内联对象数组返回。</summary>
     private static List<object> BuildTree(List<Menu> all, long pid)
     {
         return all
