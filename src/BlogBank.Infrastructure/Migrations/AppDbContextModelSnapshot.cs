@@ -17,7 +17,7 @@ namespace BlogBank.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.16")
+                .HasAnnotation("ProductVersion", "9.0.19")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -37,7 +37,15 @@ namespace BlogBank.Infrastructure.Migrations
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("longtext")
-                        .HasComment("文章正文（HTML 格式）");
+                        .HasComment("文章正文（HTML 或 Markdown 格式，由 ContentType 决定）");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("html")
+                        .HasComment("正文内容类型：html / markdown");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -651,6 +659,12 @@ namespace BlogBank.Infrastructure.Migrations
                         .HasColumnType("bigint")
                         .HasComment("主键");
 
+                    b.Property<string>("Account")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasComment("用户账号，用于登录，全局唯一");
+
                     b.Property<string>("Address")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)")
@@ -725,18 +739,12 @@ namespace BlogBank.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)")
-                        .HasComment("用户名，用于登录，全局唯一");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
+                    b.HasIndex("Account")
                         .IsUnique();
 
-                    b.HasIndex("Username")
+                    b.HasIndex("Email")
                         .IsUnique();
 
                     b.ToTable("users", null, t =>
@@ -790,6 +798,95 @@ namespace BlogBank.Infrastructure.Migrations
                     b.ToTable("user_roles", null, t =>
                         {
                             t.HasComment("用户角色关联");
+                        });
+                });
+
+            modelBuilder.Entity("BlogBank.Core.Entities.WorkBug", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasComment("主键");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)")
+                        .HasComment("创建时间");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasComment("bug 现象描述，包含报错信息、复现步骤等");
+
+                    b.Property<string>("Environment")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasComment("环境，自由文本，例如：生产环境、客户环境 v2.3");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateOnly>("OccurredDate")
+                        .HasColumnType("date")
+                        .HasComment("发生日期");
+
+                    b.Property<string>("Project")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasComment("所属项目/模块，例如：订单系统");
+
+                    b.Property<string>("RootCause")
+                        .HasColumnType("longtext")
+                        .HasComment("原因分析，排查后定位到的根本原因；未定位时可为空");
+
+                    b.Property<DateTime>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp(6)");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("int")
+                        .HasComment("严重程度：0=低 1=中 2=高");
+
+                    b.Property<string>("Solution")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasComment("处理方法（HTML 格式），修复方案或临时绕过方式，可含代码块、加粗、列表等标签");
+
+                    b.Property<DateOnly?>("SolvedDate")
+                        .HasColumnType("date")
+                        .HasComment("解决日期，未解决时为空");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasComment("处理状态：0=待处理 1=处理中 2=已解决");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasComment("bug 标题，简明概括问题");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)")
+                        .HasComment("修改时间");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("work_bugs", null, t =>
+                        {
+                            t.HasComment("工作 Bug 记录");
                         });
                 });
 

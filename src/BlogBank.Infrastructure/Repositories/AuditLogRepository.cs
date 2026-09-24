@@ -47,7 +47,7 @@ public class AuditLogRepository(AppDbContext db) : IAuditLogRepository
     /// <summary>
     /// 按 ID 查询单条操作日志。
     /// </summary>
-    public async Task<AuditLog?> GetByIdAsync(int id)
+    public async Task<AuditLog?> GetByIdAsync(long id)
         => await db.AuditLogs.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id);
 
     /// <summary>
@@ -64,7 +64,7 @@ public class AuditLogRepository(AppDbContext db) : IAuditLogRepository
     /// <summary>
     /// 删除指定 ID 的操作日志。
     /// </summary>
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(long id)
     {
         var log = await db.AuditLogs.FindAsync(id);
         if (log is null) return false;

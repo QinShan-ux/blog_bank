@@ -10,20 +10,19 @@ public class AuthService(
     ICacheService cache) : IAuthService
 {
     public async Task<(string AccessToken, string RefreshToken, DateTime ExpiresAt)?> LoginAsync(
-        string username, string password)
+        string account, string password)
     {
-        var user = await userRepo.GetByUsernameAsync(username);
+        var user = await userRepo.GetByUsernameAsync(account);
         if (user is null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             return null;
 
         if (!user.IsEnabled)
             return null;
 
-        var newVersion = user.TokenVersion + 1;
-        var (accessToken, expiresAt) = tokenService.GenerateAccessToken(user);
-        var refreshToken = await tokenService.GenerateRefreshTokenAsync(user.Id);
-        await cache.SetAsync($"tokenVersion:{user.Id}", newVersion.ToString(), 30, TimeEnum.Day);
-        _ = userRepo.UpdateVersion(user.Id, newVersion);
+        
+        var (accessToken, expiresAt) = await tokenService.GenerateAccessToken(user);
+        // var (refreshToken, expiresAtRefresh) = await tokenService.GenerateAccessToken(user);
+        var refreshToken = await tokenService.GenerateRefreshTokenAsync(user);
 
         return (accessToken, refreshToken, expiresAt);
     }
@@ -41,8 +40,8 @@ public class AuthService(
 
         await tokenService.RevokeRefreshTokenAsync(refreshToken);
 
-        var (accessToken, expiresAt) = tokenService.GenerateAccessToken(user);
-        var newRefreshToken = await tokenService.GenerateRefreshTokenAsync(user.Id);
+        var (accessToken, expiresAt) = await tokenService.GenerateAccessToken(user);
+        var newRefreshToken = await tokenService.GenerateRefreshTokenAsync(user);
 
         return (accessToken, newRefreshToken, expiresAt);
     }

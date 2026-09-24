@@ -133,26 +133,28 @@ public class MenusController(IMenuService service, ICacheService cache) : Contro
         Remark      = req.Remark
     };
 
+    // 可空字符串字段统一序列化为空串：前端 MenuItem 类型按非空 string 处理，
+    // null 会让 normalizePath 等字符串方法抛 TypeError（目录类型菜单这些字段在库中为 NULL）
     private static object ToResponse(Menu m) => new
     {
         id          = m.Id.ToString(),
         pid         = m.Pid.ToString(),
         type        = (int)m.Type,
-        name        = m.Name,
-        path        = m.Path,
-        component   = m.Component,
-        redirect    = m.Redirect,
-        permission  = m.Permission,
+        name        = m.Name ?? "",
+        path        = m.Path ?? "",
+        component   = m.Component ?? "",
+        redirect    = m.Redirect ?? "",
+        permission  = m.Permission ?? "",
         title       = m.Title,
-        icon        = m.Icon,
+        icon        = m.Icon ?? "",
         isIframe    = m.IsIframe,
-        outLink     = m.OutLink,
+        outLink     = m.OutLink ?? "",
         isHide      = m.IsHide,
         isKeepAlive = m.IsKeepAlive,
         isAffix     = m.IsAffix,
         orderNo     = m.OrderNo,
         status      = (int)m.Status,
-        remark      = m.Remark
+        remark      = m.Remark ?? ""
     };
 
     private static List<object> BuildTree(List<Menu> all, long pid)
@@ -165,21 +167,21 @@ public class MenusController(IMenuService service, ICacheService cache) : Contro
                 id          = m.Id.ToString(),
                 pid         = m.Pid.ToString(),
                 type        = (int)m.Type,
-                name        = m.Name,
-                path        = m.Path,
-                component   = m.Component,
-                redirect    = m.Redirect,
-                permission  = m.Permission,
+                name        = m.Name ?? "",
+                path        = m.Path ?? "",
+                component   = m.Component ?? "",
+                redirect    = m.Redirect ?? "",
+                permission  = m.Permission ?? "",
                 title       = m.Title,
-                icon        = m.Icon,
+                icon        = m.Icon ?? "",
                 isIframe    = m.IsIframe,
-                outLink     = m.OutLink,
+                outLink     = m.OutLink ?? "",
                 isHide      = m.IsHide,
                 isKeepAlive = m.IsKeepAlive,
                 isAffix     = m.IsAffix,
                 orderNo     = m.OrderNo,
                 status      = (int)m.Status,
-                remark      = m.Remark,
+                remark      = m.Remark ?? "",
                 children    = BuildTree(all, m.Id)
             })
             .ToList();

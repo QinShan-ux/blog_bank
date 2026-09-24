@@ -45,7 +45,8 @@ GET /api/articles
     "readTime": "5 分钟阅读",
     "excerpt": "CSS Grid 是现代前端布局的核心技术之一……",
     "tags": ["CSS", "布局", "响应式"],
-    "content": "<h2>为什么选择 CSS Grid？</h2><p>……</p>"
+    "content": "<h2>为什么选择 CSS Grid？</h2><p>……</p>",
+    "contentType": "html"
   },
   {
     "id": "js-async",
@@ -55,7 +56,8 @@ GET /api/articles
     "readTime": "8 分钟阅读",
     "excerpt": "异步编程是 JavaScript 的核心概念……",
     "tags": ["JavaScript", "异步"],
-    "content": "<h2>为什么 JavaScript 需要异步？</h2><p>……</p>"
+    "content": "## 为什么 JavaScript 需要异步？\n\n……",
+    "contentType": "markdown"
   }
 ]
 ```
@@ -128,7 +130,8 @@ GET /api/essays
 | `readTime` | `string` | 是 | 预计阅读时长，如 `5 分钟阅读` |
 | `excerpt` | `string` | 是 | 文章摘要，用于列表页展示 |
 | `tags` | `string[]` | 是 | 标签列表，用于筛选过滤 |
-| `content` | `string` | 是 | 文章正文，HTML 格式字符串 |
+| `content` | `string` | 是 | 文章正文，HTML 或 Markdown 格式字符串 |
+| `contentType` | `string` | 否 | 正文内容类型：`html`（默认）或 `markdown`。新增/更新时不传时后端按正文特征自动判断 |
 
 **TypeScript 定义**
 
@@ -142,6 +145,7 @@ interface Article {
   excerpt: string;
   tags: string[];
   content: string;
+  contentType?: string;
 }
 ```
 

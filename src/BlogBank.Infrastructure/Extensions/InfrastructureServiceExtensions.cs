@@ -4,6 +4,7 @@ using BlogBank.Infrastructure.Data;
 using BlogBank.Infrastructure.Repositories;
 using BlogBank.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -30,13 +31,15 @@ public static class InfrastructureServiceExtensions
             {
                 case "mysql":
                     var mysqlConn = configuration.GetConnectionString("MySQL")
-                        ?? throw new InvalidOperationException("ConnectionStrings:MySQL is not configured.");
+                                    ?? throw new InvalidOperationException(
+                                        "ConnectionStrings:MySQL is not configured.");
                     options.UseMySql(mysqlConn, ServerVersion.AutoDetect(mysqlConn));
                     break;
 
                 case "postgresql":
                     var pgConn = configuration.GetConnectionString("PostgreSQL")
-                        ?? throw new InvalidOperationException("ConnectionStrings:PostgreSQL is not configured.");
+                                 ?? throw new InvalidOperationException(
+                                     "ConnectionStrings:PostgreSQL is not configured.");
                     options.UseNpgsql(pgConn);
                     break;
 
@@ -53,26 +56,44 @@ public static class InfrastructureServiceExtensions
         var machineId = long.TryParse(configuration["Snowflake:MachineId"], out var mid) ? mid : 1L;
         services.AddSingleton<ISnowflakeIdGenerator>(_ => new SnowflakeIdGenerator(machineId));
 
+        // 注册 SSH 隧道 + Redis 连接
+        // 配置
+        // var sshHost = configuration["Ssh:Host"]!;           // 8.155.134.14
+        // var sshUser = configuration["Ssh:User"]!;           // root
+        // var sshPass = configuration["Ssh:Password"]!;       // SSH密码
+        // int.TryParse(configuration["Redis:LocalPort"], out var redisLocalPort);
+        //
+        // // 1. 建立 SSH 隧道 + Redis 连接
+        // var sshRedis = new SshRedisConnection();
+        // sshRedis.Connect(sshHost, sshUser, sshPass, redisLocalPort);
+
+        // // 2. 注册到 DI
+        // services.AddSingleton(sshRedis);
+        //
+        // // 从 SshRedisConnection 获取 IConnectionMultiplexer
+        // services.AddSingleton(sp =>
+        //     sp.GetRequiredService<SshRedisConnection>().Redis!);
         var redisEnabled = configuration["Redis:Enabled"] != "false";
         if (redisEnabled)
         {
             var redisConn = configuration["Redis:ConnectionString"] ?? "localhost:6379";
             services.AddSingleton<IConnectionMultiplexer>(_ =>
             {
-                var opts = ConfigurationOptions.Parse(redisConn);
+                var opts = ConfigurationOptions.Parse(redisConn + ",abortConnect=false,connectTimeout=10000,password=root");
                 opts.AbortOnConnectFail = false;
                 return ConnectionMultiplexer.Connect(opts);
             });
         }
 
         services.AddMemoryCache();
-        services.AddScoped<ICacheService>(sp => new CacheService(
+        services.AddScoped<ICacheService>(sp => new RedisCacheService(
             sp.GetService<IConnectionMultiplexer>(),
-            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+            sp.GetRequiredService<IMemoryCache>(),
             configuration));
         services.AddScoped<ITokenService>(sp => new TokenService(
             configuration,
-            sp.GetRequiredService<ICacheService>()));
+            sp.GetRequiredService<ICacheService>(),
+            sp.GetRequiredService<IMemoryCache>()));
 
         services.AddScoped<IArticleRepository, ArticleRepository>();
         services.AddScoped<IEssayRepository, EssayRepository>();
@@ -82,10 +103,11 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IMenuRepository, MenuRepository>();
         services.AddScoped<IUserMenuRepository, UserMenuRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IWorkBugRepository, WorkBugRepository>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<DataSeeder>();
         services.AddScoped<IExportTaskRepository, ExportTaskRepository>();
-        
+
         return services;
     }
 }

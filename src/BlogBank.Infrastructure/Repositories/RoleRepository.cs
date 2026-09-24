@@ -24,7 +24,7 @@ public class RoleRepository(AppDbContext db) : IRoleRepository
     /// <summary>
     /// 按 ID 查询单个角色。
     /// </summary>
-    public async Task<Role?> GetByIdAsync(int id)
+    public async Task<Role?> GetByIdAsync(long id)
     {
         return await db.Roles
             .AsNoTracking()
@@ -45,7 +45,7 @@ public class RoleRepository(AppDbContext db) : IRoleRepository
     /// <summary>
     /// 全量更新角色的编码、名称和描述字段。
     /// </summary>
-    public async Task<Role?> UpdateAsync(int id, Role updated)
+    public async Task<Role?> UpdateAsync(long id, Role updated)
     {
         var existing = await db.Roles.FindAsync(id);
         if (existing is null) return null;
@@ -61,7 +61,7 @@ public class RoleRepository(AppDbContext db) : IRoleRepository
     /// <summary>
     /// 删除指定角色，用户角色关联由数据库级联约束自动清除。
     /// </summary>
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(long id)
     {
         var role = await db.Roles.FindAsync(id);
         if (role is null) return false;
@@ -74,7 +74,7 @@ public class RoleRepository(AppDbContext db) : IRoleRepository
     /// <summary>
     /// 检查角色编码是否已被其他角色占用；<paramref name="excludeId"/> 用于排除当前角色自身。
     /// </summary>
-    public async Task<bool> CodeExistsAsync(string code, int? excludeId = null)
+    public async Task<bool> CodeExistsAsync(string code, long? excludeId = null)
     {
         return await db.Roles
             .AnyAsync(r => r.Code == code && (excludeId == null || r.Id != excludeId));

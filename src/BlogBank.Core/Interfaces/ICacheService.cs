@@ -25,4 +25,6 @@ public interface ICacheService
     Task<bool> ReleaseAsync(string key, string value);
 
     Task<bool> RenewAsync(string key, string value, TimeSpan span);
+
+    Task<long> Incr(string key);
 }

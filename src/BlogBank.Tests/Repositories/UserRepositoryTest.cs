@@ -59,8 +59,8 @@ public class UserRepositoryTest
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Equal("Bob",   result[0].Username); // 最新的在前
-        Assert.Equal("Alice",   result[1].Username); // 最新的在前
+        Assert.Equal("Bob",   result[0].Nickname); // 最新的在前
+        Assert.Equal("Alice",   result[1].Nickname); // 最新的在前
     }
 
     // ✅ 测试 GetByIdAsync：找到用户，并预加载角色
@@ -87,7 +87,7 @@ public class UserRepositoryTest
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Alice", result.Username);
+        Assert.Equal("Alice", result.Nickname);
         Assert.Single(result.UserRoles);                        // 有一个角色
         Assert.Equal("Admin", result.UserRoles[0].Role.Name);  // 角色名正确
     }
@@ -120,7 +120,7 @@ public class UserRepositoryTest
         return new User
         {
             Id = id,
-            Username = name,
+            Nickname = name,
             CreatedAt = createdAt,
             UpdatedBy = "测试",
             CreatedBy = "测试",

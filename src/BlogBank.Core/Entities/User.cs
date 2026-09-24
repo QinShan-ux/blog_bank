@@ -9,7 +9,7 @@ public class User: BaseEntity
     /// <summary>
     /// 用户名，用于登录，全局唯一。
     /// </summary>
-    public string Username { get; set; } = string.Empty;
+    public string Account { get; set; } = string.Empty;
 
     /// <summary>
     /// 显示昵称。

@@ -35,9 +35,14 @@ public class Article: BaseEntity
     public string Excerpt { get; set; } = string.Empty;
 
     /// <summary>
-    /// 文章正文，HTML 格式字符串。
+    /// 文章正文，HTML 或 Markdown 格式字符串，具体由 <see cref="ContentType"/> 决定。
     /// </summary>
     public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 正文内容类型："html"（默认）或 "markdown"。
+    /// </summary>
+    public string ContentType { get; set; } = "html";
     
     /// <summary>
     /// 乐观锁版本号

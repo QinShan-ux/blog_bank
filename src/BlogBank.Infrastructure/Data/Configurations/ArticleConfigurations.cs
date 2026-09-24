@@ -30,7 +30,12 @@ public class ArticleConfigurations: IEntityTypeConfiguration<Article>
             .HasComment("文章摘要，用于列表页展示");
         entity.Property(a => a.Content)
             .IsRequired()
-            .HasComment("文章正文（HTML 格式）");
+            .HasComment("文章正文（HTML 或 Markdown 格式，由 ContentType 决定）");
+        entity.Property(a => a.ContentType)
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue("html")
+            .HasComment("正文内容类型：html / markdown");
 
         entity.HasMany(a => a.Tags)
             .WithOne(t => t.Article)

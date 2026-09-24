@@ -61,7 +61,7 @@ public interface IUserRepository
     /// <summary>
     /// 按用户名查询用户。
     /// </summary>
-    Task<User?> GetByUsernameAsync(string username);
+    Task<User?> GetByUsernameAsync(string account);
 
     Task UpdateVersion(long id, int version);
 }

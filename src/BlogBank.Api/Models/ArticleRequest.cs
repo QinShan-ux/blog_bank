@@ -11,7 +11,8 @@ namespace BlogBank.Api.Models;
 /// <param name="ReadTime">预计阅读时长，例如"5 分钟阅读"。</param>
 /// <param name="Excerpt">文章摘要，用于列表页展示。</param>
 /// <param name="Tags">标签列表，用于筛选过滤。</param>
-/// <param name="Content">文章正文，HTML 格式字符串。</param>
+/// <param name="Content">文章正文，HTML 或 Markdown 格式字符串。</param>
+/// <param name="ContentType">正文内容类型："html" 或 "markdown"；不传时后端按正文特征自动判断。</param>
 public record ArticleRequest(
     [Required] string Title,
     [Required] string Date,
@@ -19,5 +20,6 @@ public record ArticleRequest(
     [Required] string ReadTime,
     [Required] string Excerpt,
     [Required] List<string> Tags,
-    [Required] string Content
+    [Required] string Content,
+    string? ContentType = null
 );

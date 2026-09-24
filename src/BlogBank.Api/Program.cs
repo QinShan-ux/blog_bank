@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Text.Json.Serialization;
 using BlogBank.Api.Filters;
 using BlogBank.Api.Job;
 using BlogBank.Api.Middlewares;
@@ -45,6 +46,12 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<AuditAttribute>();
     options.Filters.Add<DataMaskFilter>();
     options.Filters.Add<OperationLogFilter>();
+})
+.AddJsonOptions(options =>
+{
+    // 允许前端以字符串形式提交数字字段（雪花 ID 超出 JS Number 安全范围，
+    // 输出侧后端已把 ID 序列化为字符串，这里在读取侧保持对称）
+    options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -84,32 +91,42 @@ builder.Services.AddScoped<ExportProcessor>();
 builder.Services.AddScoped<IStorageService, LocalStorageService>();
 
 # region mq
+// ConnectMq=false 时不连接 RabbitMQ（发布走空实现、不启动消费者），保证无 Broker 环境可启动
+var connectMq = builder.Configuration.GetValue<bool>("ConnectMq", true);
+
 builder.Services.Configure<RabbitMqOptions>(
     builder.Configuration.GetSection("RabbitMQ"));
 
-// 从配置创建连接
-builder.Services.AddSingleton<IConnection>(sp =>
+if (connectMq)
 {
-    var options = sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
-
-    var factory = new ConnectionFactory
+    // 从配置创建连接
+    builder.Services.AddSingleton<IConnection>(sp =>
     {
-        HostName         = options.Host,
-        Port             = options.Port,
-        UserName         = options.UserName,
-        Password         = options.Password,
-        VirtualHost      = "/",
-        AutomaticRecoveryEnabled = true   // 断线自动重连
-    };
+        var options = sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
 
-    return factory.CreateConnectionAsync().GetAwaiter().GetResult();
-});
+        var factory = new ConnectionFactory
+        {
+            HostName         = options.Host,
+            Port             = options.Port,
+            UserName         = options.UserName,
+            Password         = options.Password,
+            VirtualHost      = "/",
+            AutomaticRecoveryEnabled = true   // 断线自动重连
+        };
 
-builder.Services.AddSingleton<RabbitMqInitializer>();
+        return factory.CreateConnectionAsync().GetAwaiter().GetResult();
+    });
 
-// app.Run() 之前调用，保证队列在消费者启动前已创建
-builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
-builder.Services.AddHostedService<ExportWorker>();
+    builder.Services.AddSingleton<RabbitMqInitializer>();
+
+    // app.Run() 之前调用，保证队列在消费者启动前已创建
+    builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+    builder.Services.AddHostedService<ExportWorker>();
+}
+else
+{
+    builder.Services.AddSingleton<IMessagePublisher, NullMessagePublisher>();
+}
 # endregion
 builder.Services.AddApplicationServices();
 builder.Services.AddHttpContextAccessor();
@@ -163,8 +180,12 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-var initializer = app.Services.GetRequiredService<RabbitMqInitializer>();
-await initializer.InitializeAsync();
+// 初始化队列，在消费者使用之前（ConnectMq=false 时跳过）
+if (connectMq)
+{
+    var initializer = app.Services.GetRequiredService<RabbitMqInitializer>();
+    await initializer.InitializeAsync();
+}
 // 根据配置决定是否自动应用数据库迁移
 if (app.Configuration.GetValue<bool>("AutoMigrate"))
 {
@@ -172,7 +193,7 @@ if (app.Configuration.GetValue<bool>("AutoMigrate"))
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 }
-
+Console.WriteLine(app.Configuration.GetValue<bool>("Seed:Enabled", false));
 // 根据配置决定是否执行初始数据填充
 if (bool.TryParse(app.Configuration["Seed:Enabled"], out var seedEnabled) && seedEnabled)
 {
@@ -198,8 +219,7 @@ if (app.Environment.IsDevelopment() || true)
 app.UseStaticFiles();  // ← 必须有
 app.UseCors();
 app.UseAuthentication();
-app.UseMiddleware<WhitelistMiddleware>();
-app.UseMiddleware<TokenVersionMiddleware>();
+app.UseMiddleware<BlackListMiddleware>();
 app.UseAuthorization();
 app.MapHub<ExportHub>("/hubs/export");
 app.MapControllers();

@@ -52,7 +52,7 @@ public class UserRolesController(IUserRoleService service, ICacheService cache) 
         var data = items.Select(ur => new
         {
             userId     = ur.UserId.ToString(),
-            username   = ur.User.Username,
+            Account   = ur.User.Account,
             nickname   = ur.User.Nickname,
             roleId     = ur.RoleId,
             assignedAt = ur.AssignedAt

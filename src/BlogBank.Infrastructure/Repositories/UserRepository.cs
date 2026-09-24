@@ -56,7 +56,7 @@ public class UserRepository(AppDbContext db, ISnowflakeIdGenerator idGen,ILogger
         var existing = await db.Users.FindAsync(id);
         if (existing is null) return null;
 
-        existing.Username  = updated.Username;
+        existing.Account  = updated.Account;
         existing.Nickname  = updated.Nickname;
         existing.Email     = updated.Email;
         existing.Avatar    = updated.Avatar;
@@ -90,7 +90,7 @@ public class UserRepository(AppDbContext db, ISnowflakeIdGenerator idGen,ILogger
     public async Task<bool> UsernameExistsAsync(string username, long? excludeId = null)
     {
         return await db.Users
-            .AnyAsync(u => u.Username == username && (excludeId == null || u.Id != excludeId));
+            .AnyAsync(u => u.Account == username && (excludeId == null || u.Id != excludeId));
     }
 
     /// <summary>
@@ -105,11 +105,11 @@ public class UserRepository(AppDbContext db, ISnowflakeIdGenerator idGen,ILogger
     /// <summary>
     /// 按用户名查询用户。
     /// </summary>
-    public async Task<User?> GetByUsernameAsync(string username)
+    public async Task<User?> GetByUsernameAsync(string account)
     {
         return await db.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Username == username);
+            .FirstOrDefaultAsync(u => u.Account == account);
     }
 
     public async Task UpdateVersion(long userId, int version)

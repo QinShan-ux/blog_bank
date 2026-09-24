@@ -17,7 +17,7 @@ public class ArticleRepository(AppDbContext db, ISnowflakeIdGenerator idGen) : I
     public async Task<IEnumerable<Article>> GetAllAsync(int page,int size)
     {
         var subQuery = db.Articles.AsNoTracking()
-            .Skip(page * size)
+            .Skip(Math.Max(0, (page - 1) * size))
             .Take(size)
             .Select(it => it.Id);
         var res = await db.Articles.AsNoTracking()
@@ -69,12 +69,13 @@ public class ArticleRepository(AppDbContext db, ISnowflakeIdGenerator idGen) : I
         if (existing is null) return null;
         // 把未追踪的实体"挂载"回 DbContext，设置状态为已修改
         db.Articles.Attach(existing).State = EntityState.Modified;
-        existing.Title    = updated.Title;
-        existing.Date     = updated.Date;
-        existing.Category = updated.Category;
-        existing.ReadTime = updated.ReadTime;
-        existing.Excerpt  = updated.Excerpt;
-        existing.Content  = updated.Content;
+        existing.Title       = updated.Title;
+        existing.Date        = updated.Date;
+        existing.Category    = updated.Category;
+        existing.ReadTime    = updated.ReadTime;
+        existing.Excerpt     = updated.Excerpt;
+        existing.Content     = updated.Content;
+        existing.ContentType = updated.ContentType;
 
         // 删除旧标签，重新写入新标签
         existing.Tags = updated.Tags

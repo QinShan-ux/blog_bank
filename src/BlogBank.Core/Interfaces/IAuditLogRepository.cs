@@ -12,7 +12,7 @@ public interface IAuditLogRepository
         DateTime? startTime = null,
         DateTime? endTime = null);
 
-    Task<AuditLog?> GetByIdAsync(int id);
+    Task<AuditLog?> GetByIdAsync(long id);
     Task<AuditLog> CreateAsync(AuditLog log);
-    Task<bool> DeleteAsync(int id);
+    Task<bool> DeleteAsync(long id);
 }

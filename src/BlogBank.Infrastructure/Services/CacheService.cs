@@ -186,6 +186,25 @@ public class CacheService : ICacheService
         var res = _memory.TryGetValue(key,out var obj);
         return res;
     }
+    
+    public async Task<long> Incr(string key)
+    {
+        if (UseRedis)
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+                return await db.StringIncrementAsync(key);
+            }
+            catch (Exception e)
+            {
+                
+                throw;
+            }
+        }
+
+        return 1L;
+    }
 
     // 加锁
     public async Task<bool> AcquireAsync(string key, string value, TimeSpan span)
@@ -250,4 +269,5 @@ public class CacheService : ICacheService
         var defaultVal = _config["Cache:DefaultExpirySeconds"];
         return defaultVal != null && int.TryParse(defaultVal, out var def) ? def : 300;
     }
+    
 }

@@ -81,8 +81,17 @@ public abstract class RabbitMqConsumer<T> : BackgroundService where T : MyMessag
             }
         };
 
-        await channel.BasicConsumeAsync(QueueName, autoAck: false, consumer, stoppingToken);
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+        try
+        {
+            await channel.BasicConsumeAsync(QueueName, autoAck: false, consumer, stoppingToken);
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"\n队列错误，可能{QueueName}队列不存在\n");
+            throw;
+        }
+        
     }
 
     // 子类实现业务逻辑

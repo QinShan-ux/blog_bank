@@ -14,9 +14,9 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
 
-    <!-- EF Core + MySQL -->
-    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore"    Version="9.0.16" />
+    <!-- EF Core + MySQL（浮动 9.*，与 Infrastructure 保持一致，避免程序集版本冲突） -->
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore"    Version="9.*" />
 
     <!-- 配置读取 -->
     <PackageReference Include="Microsoft.Extensions.Configuration"             Version="9.0.0" />

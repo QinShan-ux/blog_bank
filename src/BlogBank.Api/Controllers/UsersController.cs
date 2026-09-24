@@ -66,8 +66,8 @@ public class UsersController(IUserService service, ICacheService cache, IMapper 
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create([FromBody] UserRequest req)
     {
-        if (await service.UsernameExistsAsync(req.Username))
-            return Conflict(new { message = $"用户名 '{req.Username}' 已被使用。" });
+        if (await service.UsernameExistsAsync(req.Account))
+            return Conflict(new { message = $"用户名 '{req.Account}' 已被使用。" });
 
         if (await service.EmailExistsAsync(req.Email))
             return Conflict(new { message = $"邮箱 '{req.Email}' 已被使用。" });
@@ -88,8 +88,8 @@ public class UsersController(IUserService service, ICacheService cache, IMapper 
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(long id, [FromBody] UserRequest req)
     {
-        if (await service.UsernameExistsAsync(req.Username, excludeId: id))
-            return Conflict(new { message = $"用户名 '{req.Username}' 已被使用。" });
+        if (await service.UsernameExistsAsync(req.Account, excludeId: id))
+            return Conflict(new { message = $"用户名 '{req.Account}' 已被使用。" });
 
         if (await service.EmailExistsAsync(req.Email, excludeId: id))
             return Conflict(new { message = $"邮箱 '{req.Email}' 已被使用。" });
@@ -115,7 +115,7 @@ public class UsersController(IUserService service, ICacheService cache, IMapper 
 
     private static User ToEntity(UserRequest req) => new()
     {
-        Username     = req.Username,
+        Account     = req.Account,
         Nickname     = req.Nickname,
         Email        = req.Email,
         PasswordHash = string.IsNullOrEmpty(req.Password)
@@ -128,7 +128,7 @@ public class UsersController(IUserService service, ICacheService cache, IMapper 
     private static object ToResponse(User u) => new
     {
         id        = u.Id.ToString(),
-        username  = u.Username,
+        username  = u.Account,
         nickname  = u.Nickname,
         email     = u.Email,
         avatar    = u.Avatar,

@@ -21,7 +21,7 @@ public class LoginRequestExampleFilter : IOperationFilter
         {
             mediaType.Example = new OpenApiObject
             {
-                ["username"] = new OpenApiString("superadmin"),
+                ["account"] = new OpenApiString("superadmin"),
                 ["password"] = new OpenApiString("Admin@123")
             };
         }

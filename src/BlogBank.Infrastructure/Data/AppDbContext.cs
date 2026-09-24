@@ -15,7 +15,9 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace BlogBank.Infrastructure.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor httpContextAccessor,ISnowflakeIdGenerator idGen)
+public class AppDbContext(DbContextOptions<AppDbContext> options, 
+    IHttpContextAccessor httpContextAccessor,
+    ISnowflakeIdGenerator idGen)
     : DbContext(options)
 {
     public DbSet<Article> Articles => Set<Article>();
@@ -29,6 +31,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
     public DbSet<UserMenu> UserMenus => Set<UserMenu>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<ExportTask> ExportTasks => Set<ExportTask>();
+    public DbSet<WorkBug> WorkBugs => Set<WorkBug>();
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -178,7 +181,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAc
                     EntityState.Added => "新增",
                     EntityState.Modified => "修改",
                     EntityState.Deleted => "删除",
-                    _ => "未知"
+                    _ => "查询"
                 },
 
                 // 旧值：只记录发生变化的字段，新增没有旧值

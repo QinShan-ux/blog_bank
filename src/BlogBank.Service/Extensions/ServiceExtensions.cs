@@ -16,6 +16,7 @@ public static class ServiceExtensions
         services.AddScoped<IUserRoleService, UserRoleService>();
         services.AddScoped<IUserMenuService, UserMenuService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IWorkBugService, WorkBugService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IExportTaskService, ExportTaskService>();
         return services;

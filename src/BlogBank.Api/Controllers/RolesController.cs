@@ -25,13 +25,13 @@ public class RolesController(IRoleService service, ICacheService cache, IMapper 
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
-        var cached = await cache.GetAsync("roles:all");
+        var cached = await cache.GetAsync("roles:v2:all");
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
         var roles = await service.GetAllAsync();
         var data = roles.Select(ToResponse).ToList();
-        await cache.SetAsync("roles:all", JsonSerializer.Serialize(data), "Roles");
+        await cache.SetAsync("roles:v2:all", JsonSerializer.Serialize(data), "Roles");
         return Ok(data);
     }
 
@@ -40,15 +40,15 @@ public class RolesController(IRoleService service, ICacheService cache, IMapper 
     [HttpGet("{id:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(long id)
     {
-        var cached = await cache.GetAsync($"roles:{id}");
+        var cached = await cache.GetAsync($"roles:v2:{id}");
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
         var role = await service.GetByIdAsync(id);
-        var res = mapper.Map<RoleDto>(role);
         if (role is null) return NotFound();
+        var res = mapper.Map<RoleDto>(role);
 
         return Ok(res);
     }
@@ -69,7 +69,7 @@ public class RolesController(IRoleService service, ICacheService cache, IMapper 
             return Conflict(new { message = $"角色编码 '{req.Code}' 已被使用。" });
 
         var created = await service.CreateAsync(ToEntity(req));
-        await cache.RemoveAsync("roles:all");
+        await cache.RemoveAsync("roles:v2:all");
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToResponse(created));
     }
 
@@ -78,31 +78,31 @@ public class RolesController(IRoleService service, ICacheService cache, IMapper 
     /// 若角色编码与其他角色冲突则返回 409 Conflict。
     /// </summary>
     // PUT /api/roles/{id}
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Update(int id, [FromBody] RoleRequest req)
+    public async Task<IActionResult> Update(long id, [FromBody] RoleRequest req)
     {
         if (await service.CodeExistsAsync(req.Code, excludeId: id))
             return Conflict(new { message = $"角色编码 '{req.Code}' 已被使用。" });
 
         var updated = await service.UpdateAsync(id, ToEntity(req));
         if (updated is null) return NotFound();
-        await cache.RemoveAsync("roles:all", $"roles:{id}");
+        await cache.RemoveAsync("roles:v2:all", $"roles:v2:{id}");
         return Ok(ToResponse(updated));
     }
 
     /// <summary>删除指定 ID 的角色及其所有用户关联。</summary>
     // DELETE /api/roles/{id}
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:long}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(long id)
     {
         var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();
-        await cache.RemoveAsync("roles:all", $"roles:{id}");
+        await cache.RemoveAsync("roles:v2:all", $"roles:v2:{id}");
         return NoContent();
     }
 
@@ -119,7 +119,7 @@ public class RolesController(IRoleService service, ICacheService cache, IMapper 
 
     private static object ToResponse(Role r) => new
     {
-        id          = r.Id,
+        id          = r.Id.ToString(),
         code        = r.Code,
         name        = r.Name,
         description = r.Description,

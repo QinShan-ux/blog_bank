@@ -22,7 +22,7 @@ public class AuthController(IAuthService authService) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
     {
-        var result = await authService.LoginAsync(req.Username, req.Password);
+        var result = await authService.LoginAsync(req.Account, req.Password);
         if (result is null)
             return Unauthorized(new { message = "用户名或密码错误，或账号已禁用。" });
 

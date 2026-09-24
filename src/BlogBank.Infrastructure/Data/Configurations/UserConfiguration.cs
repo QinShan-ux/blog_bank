@@ -14,9 +14,9 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
         // entity.Property(u => u.Id)
         //       .ValueGeneratedNever()
         //       .HasComment("用户唯一标识（雪花算法生成）");
-        entity.Property(u => u.Username)
+        entity.Property(u => u.Account)
             .HasMaxLength(50).IsRequired()
-            .HasComment("用户名，用于登录，全局唯一");
+            .HasComment("用户账号，用于登录，全局唯一");
         entity.Property(u => u.Nickname)
             .HasMaxLength(100).IsRequired()
             .HasComment("显示昵称");
@@ -46,7 +46,7 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
         entity.Property(u => u.RowVersion)
             .IsRowVersion()
             .IsConcurrencyToken();
-        entity.HasIndex(u => u.Username).IsUnique();
+        entity.HasIndex(u => u.Account).IsUnique();
         entity.HasIndex(u => u.Email).IsUnique();
     }
 }

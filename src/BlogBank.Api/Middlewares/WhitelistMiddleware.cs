@@ -28,6 +28,11 @@ public class WhitelistMiddleware(RequestDelegate next)
                     return;
                 }
             }
+            else
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
         }
 
         await next(context);

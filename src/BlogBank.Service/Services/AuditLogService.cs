@@ -15,9 +15,9 @@ public class AuditLogService(IAuditLogRepository repo) : IAuditLogService
         DateTime? endTime = null)
         => repo.GetPagedAsync(page, pageSize, userId, action, tableName, startTime, endTime);
 
-    public Task<AuditLog?> GetByIdAsync(int id) => repo.GetByIdAsync(id);
+    public Task<AuditLog?> GetByIdAsync(long id) => repo.GetByIdAsync(id);
 
     public Task<AuditLog> CreateAsync(AuditLog log) => repo.CreateAsync(log);
 
-    public Task<bool> DeleteAsync(int id) => repo.DeleteAsync(id);
+    public Task<bool> DeleteAsync(long id) => repo.DeleteAsync(id);
 }

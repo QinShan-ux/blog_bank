@@ -1,7 +1,9 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using BlogBank.Api.Filters;
 using BlogBank.Api.Models;
 using BlogBank.Core.Entities;
+using BlogBank.Core.Enums;
 using BlogBank.Core.Interfaces;
 using BlogBank.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -23,13 +25,15 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(int page,int size)
     {
-        var cached = await cache.GetAsync($"articles:{page}:{size}");
+        // 写操作通过 INCR articles:ver 使全部分页缓存键失效（键含任意 page/size 组合，无法逐个清除）
+        var ver = await cache.GetAsync("articles:ver") ?? "0";
+        var cached = await cache.GetAsync($"articles:v{ver}:{page}:{size}");
         if (cached != null)
             return Ok(JsonSerializer.Deserialize<JsonElement>(cached));
 
         var articles = await service.GetAllAsync(page,size);
         var data = articles.Select(ToResponse).ToList();
-        await cache.SetAsync($"articles:{page}:{size}", JsonSerializer.Serialize(data), "Articles");
+        await cache.SetAsync($"articles:v{ver}:{page}:{size}", JsonSerializer.Serialize(data), "Articles");
         return Ok(data);
     }
 
@@ -77,7 +81,8 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
     public async Task<IActionResult> Create([FromBody] ArticleRequest req)
     {
         var created = await service.CreateAsync(ToEntity(req));
-        await cache.RemoveAsync("articles:all", "articles:titles");
+        await cache.SetAsync("articles:ver", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(), 365, TimeEnum.Day);
+        await cache.RemoveAsync("articles:titles");
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToResponse(created));
     }
 
@@ -92,7 +97,8 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
             return BadRequest(new { message = "请求列表不能为空。" });
 
         var created = await service.CreateBatchAsync(reqs.Select(ToEntity));
-        await cache.RemoveAsync("articles:all", "articles:titles");
+        await cache.SetAsync("articles:ver", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(), 365, TimeEnum.Day);
+        await cache.RemoveAsync("articles:titles");
         return StatusCode(StatusCodes.Status201Created, created.Select(ToResponse));
     }
 
@@ -107,7 +113,8 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
     {
         var updated = await service.UpdateAsync(id, ToEntity(req));
         if (updated is null) return NotFound();
-        await cache.RemoveAsync("articles:all", "articles:titles", $"articles:{id}");
+        await cache.SetAsync("articles:ver", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(), 365, TimeEnum.Day);
+        await cache.RemoveAsync("articles:titles", $"articles:{id}");
         return Ok(ToResponse(updated));
     }
 
@@ -120,7 +127,8 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
     {
         var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();
-        await cache.RemoveAsync("articles:all", "articles:titles", $"articles:{id}");
+        await cache.SetAsync("articles:ver", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(), 365, TimeEnum.Day);
+        await cache.RemoveAsync("articles:titles", $"articles:{id}");
         return NoContent();
     }
 
@@ -132,8 +140,22 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
         ReadTime = req.ReadTime,
         Excerpt = req.Excerpt,
         Content = req.Content,
+        ContentType = ResolveContentType(req.ContentType, req.Content),
         Tags = req.Tags.Select(t => new ArticleTag { Tag = t }).ToList()
     };
+
+    /// <summary>
+    /// 决定文章正文的内容类型：显式指定（html/markdown）优先，未指定时按正文特征自动判断。
+    /// </summary>
+    private static string ResolveContentType(string? contentType, string content) =>
+        string.IsNullOrWhiteSpace(contentType)
+            ? LooksLikeHtml(content) ? "html" : "markdown"
+            : contentType.Trim().ToLowerInvariant();
+
+    /// <summary>正文以 "&lt;" 开头或包含 HTML 块级标签时视为 html，否则视为 markdown。</summary>
+    private static bool LooksLikeHtml(string content) =>
+        content.TrimStart().StartsWith('<') ||
+        Regex.IsMatch(content, @"<(p|div|h[1-6]|ul|ol|table|blockquote|pre|br)\b", RegexOptions.IgnoreCase);
 
     private static object ToResponse(Article a) => new
     {
@@ -144,6 +166,7 @@ public class ArticlesController(IArticleService service, ICacheService cache) : 
         readTime = a.ReadTime,
         excerpt = a.Excerpt,
         tags = a.Tags.Select(t => t.Tag).ToList(),
-        content = a.Content
+        content = a.Content,
+        contentType = a.ContentType
     };
 }

@@ -24,8 +24,8 @@ public class UserServiceTest
         // Arrange
         var fakeUsers = new List<User>
         {
-            new User { Id = 1, Username = "Alice" },
-            new User { Id = 2, Username = "Bob" }
+            new User { Id = 1, Account = "Alice" },
+            new User { Id = 2, Account = "Bob" }
         };
         _mockRepo.Setup(r => r.GetAllAsync())
             .ReturnsAsync(fakeUsers);

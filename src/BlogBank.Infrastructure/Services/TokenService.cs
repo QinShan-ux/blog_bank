@@ -12,61 +12,91 @@ using StackExchange.Redis;
 
 namespace BlogBank.Infrastructure.Services;
 
-public class TokenService(IConfiguration configuration, ICacheService cache) : ITokenService
+public class TokenService : ITokenService
 {
-    // private bool UseRedis => redis is { IsConnected: true };
+    private readonly IConfiguration _configuration;
+    private readonly ICacheService _cache;
+    private readonly IMemoryCache _memoryCache;
+    private readonly String _secretKey;
+    private readonly String _issuer;
+    private readonly String _audience;
+    private readonly int _expMinutes;
+    private readonly int _expDay;
 
-    public (string token, DateTime expiresAt) GenerateAccessToken(User user)
+    public TokenService(IConfiguration configuration, ICacheService cache, IMemoryCache memoryCache)
     {
-        var secretKey = configuration["Jwt:SecretKey"]
-            ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
-        var issuer     = configuration["Jwt:Issuer"] ?? "BlogBank";
-        var audience   = configuration["Jwt:Audience"] ?? "BlogBank";
-        var expMinutes = int.TryParse(configuration["Jwt:AccessTokenExpireMinutes"], out var m) ? m : 15;
-
-        var key       = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        _configuration = configuration;
+        _cache = cache;
+        _memoryCache = memoryCache;
+        _secretKey = _configuration["Jwt:SecretKey"]
+                     ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
+        _issuer = _configuration["Jwt:Issuer"] ?? "BlogBank";
+        _audience   = _configuration["Jwt:Audience"] ?? "BlogBank";
+        _expMinutes = int.Parse(_configuration["Jwt:AccessTokenExpireMinutes"] ?? "30");
+        _expDay = int.Parse(_configuration["Jwt:RefreshTokenExpireDays"] ?? "7");
+    }
+    public async Task<(string token, DateTime expiresAt)> GenerateAccessToken(User user)
+    {
+        var key       = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
         var creds     = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expiresAt = DateTime.UtcNow.AddMinutes(expMinutes);
-        
+        var accessExpire = DateTime.UtcNow.AddMinutes(_expMinutes);
+        // 从redis中获取序列号 + 1
+        var seq = await _cache.Incr($"blank:token:user:{user.Id}");
+        // 将序列号保存到本地缓存
+        _memoryCache.Set($"blank:token:user:{user.Id}", seq);
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Name, user.Account),
             new Claim("Nickname", user.Nickname),
             new Claim("UserId",user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim("tokenVersion",$"{user.TokenVersion + 1}".ToString())
+            new Claim("tokenVersion",$"{user.TokenVersion + 1}".ToString()),
+            new Claim("revoke","false"),
+            new Claim("seq",seq.ToString())
         };
 
         var token = new JwtSecurityToken(
-            issuer:             issuer,
-            audience:           audience,
+            issuer:             _issuer,
+            audience:           _audience,
             claims:             claims,
             notBefore:          DateTime.UtcNow,
-            expires:            expiresAt,
+            expires:            accessExpire,
             signingCredentials: creds);
         var resToken = new JwtSecurityTokenHandler().WriteToken(token);
         var id = new JwtSecurityTokenHandler().ReadJwtToken(resToken).Id;
-        var cacheKey = $"access_token:{id}";
-        cache.SetAsync(cacheKey, user.Id.ToString(), expMinutes, TimeEnum.Minute);
-        return (resToken, expiresAt);
+        // var cacheKey = $"access_token:{id}";
+        // cache.SetAsync(cacheKey, user.Id.ToString(), expMinutes, TimeEnum.Minute);
+        return (resToken, accessExpire);
     }
 
-    public async Task<string> GenerateRefreshTokenAsync(long userId)
+    public async Task<string> GenerateRefreshTokenAsync(User user)
     {
-        var expDays = int.TryParse(configuration["Jwt:RefreshTokenExpireDays"], out var d) ? d : 7;
-        var token   = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        var cacheKey = $"refresh_token:{token}";
-
-        await cache.SetAsync(cacheKey, userId.ToString(), expDays, TimeEnum.Day);
-        return token;
+        var key       = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+        var creds     = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+        };
+        var refreshExpire = DateTime.UtcNow.AddMinutes(_expMinutes);
+        var cacheKey = $"refresh_token:{user.Id}";
+        var token = new JwtSecurityToken(
+            issuer:             _issuer,
+            audience:           _audience,
+            claims:             claims,
+            notBefore:          DateTime.UtcNow,
+            expires:            refreshExpire,
+            signingCredentials: creds);
+        var resToken = new JwtSecurityTokenHandler().WriteToken(token);
+        await _cache.SetAsync(cacheKey, resToken, 7, TimeEnum.Day);
+        return resToken;
     }
 
     public async Task<long?> ValidateRefreshTokenAsync(string refreshToken)
     {
         var cacheKey = $"refresh_token:{refreshToken}";
 
-        var value = await cache.GetAsync(cacheKey);
+        var value = await _cache.GetAsync(cacheKey);
         if(!string.IsNullOrEmpty(value))
             return long.TryParse(value, out var uid) ? uid : null;
         return null;
@@ -90,7 +120,7 @@ public class TokenService(IConfiguration configuration, ICacheService cache) : I
     {
         var cacheKey = $"refresh_token:{refreshToken}";
 
-        await cache.RemoveAsync(cacheKey);
+        await _cache.RemoveAsync(cacheKey);
         // if (UseRedis)
         // {
         //     try
@@ -109,6 +139,6 @@ public class TokenService(IConfiguration configuration, ICacheService cache) : I
         var id = new JwtSecurityTokenHandler().ReadJwtToken(accessToken).Id;
         var accessCache = $"access_token:{id}";
         var refreshCache = $"refresh_token:{refreshToken}";
-        return  cache.RemoveAsync(accessCache, refreshCache);
+        return _cache.RemoveAsync(accessCache, refreshCache);
     }
 }

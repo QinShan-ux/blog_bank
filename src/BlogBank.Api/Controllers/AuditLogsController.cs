@@ -33,19 +33,19 @@ public class AuditLogsController(IAuditLogService service) : ControllerBase
         if (pageSize is < 1 or > 100) pageSize = 20;
 
         var (items, total) = await service.GetPagedAsync(page, pageSize, userId, action, tableName, startTime, endTime);
-        return Ok(new { total, page, pageSize, items });
+        return Ok(new { total, page, pageSize, items = items.Select(ToResponse) });
     }
 
     /// <summary>按 ID 获取单条操作日志。</summary>
     // GET /api/audit-logs/{id}
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(long id)
     {
         var log = await service.GetByIdAsync(id);
         if (log is null) return NotFound();
-        return Ok(log);
+        return Ok(ToResponse(log));
     }
 
     /// <summary>手动新增一条操作日志，操作时间由服务端自动记录。</summary>
@@ -56,15 +56,33 @@ public class AuditLogsController(IAuditLogService service) : ControllerBase
     public async Task<IActionResult> Create([FromBody] AuditLogRequest req)
     {
         var created = await service.CreateAsync(ToEntity(req));
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToResponse(created));
     }
+
+    /// <summary>雪花 ID 以字符串返回，避免 JS 端 JSON 数字精度丢失。</summary>
+    private static object ToResponse(AuditLog log) => new
+    {
+        id          = log.Id.ToString(),
+        traceId     = log.TraceId,
+        userId      = log.UserId,
+        userName    = log.UserName,
+        requestUrl  = log.RequestUrl,
+        ipAddress   = log.IpAddress,
+        httpMethod  = log.HttpMethod,
+        tableName   = log.TableName,
+        entityId    = log.EntityId,
+        action      = log.Action,
+        oldValues   = log.OldValues,
+        newValues   = log.NewValues,
+        operatedAt  = log.OperatedAt
+    };
 
     /// <summary>删除指定 ID 的操作日志。</summary>
     // DELETE /api/audit-logs/{id}
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:long}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(long id)
     {
         var deleted = await service.DeleteAsync(id);
         if (!deleted) return NotFound();

@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet sln:*)"
+      "Bash(dotnet sln:*)",
+      "Bash(npm --version)",
+      "Bash(pnpm --version)",
+      "Bash(npm run *)",
+      "Bash(curl *)",
+      "Bash(dotnet build *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(dotnet ef *)",
+      "Bash(grep *)",
+      "Bash(git status *)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"ignore-exit=$?\")",
+      "Bash(cd *)",
+      "Bash(powershell -Command \"Get-CimInstance Win32_Process -Filter 'ProcessId=30712' | Select-Object ProcessId,Name,CommandLine | Format-List\")",
+      "Bash(tasklist //FI \"PID eq 30712\")",
+      "Bash(wmic process *)",
+      "Bash(npm install *)",
+      "Bash(tasklist)"
     ]
   }
 }
